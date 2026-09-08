@@ -1,5 +1,6 @@
 import type { Holiday } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { toISODateStr } from './dateUtils';
 
 /**
  * Parses an RFC 5545 .ics file text and extracts holiday event date ranges
@@ -34,8 +35,14 @@ export const parseICSFile = (icsText: string): Holiday[] => {
     } else if (trimmed === 'END:VEVENT') {
       if (inEvent && dtStart) {
         const start = parseDate(dtStart);
-        // If no dtEnd or same as start, endDate = startDate
-        const end = dtEnd ? parseDate(dtEnd) : start;
+        let end = dtEnd ? parseDate(dtEnd) : start;
+        // RFC 5545: DTEND for all-day events (VALUE=DATE) is exclusive
+        // If end date differs from start and dtEnd has no time component, subtract 1 day
+        if (end && dtEnd && !dtEnd.includes('T') && end !== start) {
+          const endDate = new Date(end);
+          endDate.setDate(endDate.getDate() - 1);
+          end = toISODateStr(endDate);
+        }
         if (start) {
           holidays.push({
             id: uuidv4(),

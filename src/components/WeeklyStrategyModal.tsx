@@ -15,21 +15,23 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
   const { settings } = useSettings();
 
   const { subjectStrategies, totalClassesThisWeek, criticalCount, safeCount } = useMemo(() => {
-    let totalClasses = 0;
+    const totalClasses = subjects.reduce((sum, s) => {
+      const multiplier = s.isLab ? 2 : 1;
+      return sum + (s.schedule || []).length * multiplier;
+    }, 0);
 
     const strategies = subjects.map((subject) => {
       const stats = calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays);
       const multiplier = subject.isLab ? 2 : 1;
       const weeklySlotsCount = (subject.schedule || []).length;
       const sessionsThisWeek = weeklySlotsCount * multiplier;
-      totalClasses += sessionsThisWeek;
 
       const thresholdPct = (subject.threshold || settings.globalThreshold) * 100;
-      const isCritical = stats.bunkBudget <= 0 || stats.attendancePct < thresholdPct;
+      const isCritical = stats.bunkBudget < 0 || stats.attendancePct < thresholdPct;
       const isRisky = !isCritical && stats.bunkBudget <= 2;
       const isSafe = !isCritical && !isRisky;
 
-      let advice = '';
+      let advice: string;
       if (isCritical) {
         advice = `Must attend all ${sessionsThisWeek} classes! Need ${stats.classesNeededToRecover} consecutive classes to recover above ${Math.round(thresholdPct)}%.`;
       } else if (isRisky) {
@@ -64,7 +66,11 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-transparent flex justify-between items-center">
@@ -83,9 +89,12 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
           </div>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
           >
-            ✕
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 

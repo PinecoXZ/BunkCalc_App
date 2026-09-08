@@ -1,7 +1,8 @@
-import { LocalNotifications } from '@capacitor/local-notifications';
+import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/local-notifications';
 import type { Subject, AttendanceRecord, AppSettings } from './types';
 import { calculateSubjectStats } from './calculations';
 import { ensureNotificationPermission } from './permissions';
+import { toISODateStr } from './dateUtils';
 
 // Unique IDs for different notification types
 const NOTIF_ID_DAILY_BASE = 100000;
@@ -9,18 +10,19 @@ const NOTIF_ID_POST_CLASS_BASE = 200000;
 const NOTIF_ID_THRESHOLD_BASE = 300000;
 const NOTIF_ID_STATUS_BASE = 400000;
 const NOTIF_ID_SUNDAY_SUMMARY = 500000;
+const NOTIF_ID_DAILY_DIGEST = 600000;
 
 const getSubjectHash = (id: string) => {
   return Math.abs(id.split('').reduce((a, b) => { 
     a = ((a << 5) - a) + b.charCodeAt(0); 
     return a & a; 
-  }, 0)) % 1000;
+  }, 0)) % 10000;
 };
 
 // Generate deterministic collision-free 32-bit positive integer IDs
 const getReminderId = (base: number, dayOffset: number, subjectId: string, slotIndex: number) => {
   const subHash = getSubjectHash(subjectId);
-  return base + (dayOffset * 10000) + (subHash * 10) + (slotIndex % 10);
+  return base + (dayOffset * 100000) + (subHash * 10) + (slotIndex % 10);
 };
 
 /**
@@ -35,15 +37,15 @@ export const initNotificationActionTypes = async () => {
           actions: [
             {
               id: 'mark_present',
-              title: '✅ Present',
+              title: 'Mark Present',
             },
             {
               id: 'mark_absent',
-              title: '❌ Absent',
+              title: 'Mark Absent',
             },
             {
               id: 'mark_cancelled',
-              title: '🚫 Cancelled',
+              title: 'Cancelled Class',
             },
           ],
         },
@@ -72,7 +74,7 @@ export const scheduleDailyClassReminders = async (
   try {
     const pending = await LocalNotifications.getPending();
     const dailyIds = pending.notifications
-      .filter(n => (n.id < NOTIF_ID_THRESHOLD_BASE || (n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_THRESHOLD_BASE)))
+      .filter(n => n.id < NOTIF_ID_THRESHOLD_BASE)
       .map(n => ({ id: n.id }));
     
     if (dailyIds.length > 0) {
@@ -86,7 +88,7 @@ export const scheduleDailyClassReminders = async (
     return;
   }
 
-  const notifications: any[] = [];
+  const notifications: LocalNotificationSchema[] = [];
   const now = new Date();
 
   // Schedule reminders for the next 7 days (including today and the next 6 days)
@@ -155,6 +157,9 @@ export const scheduleDailyClassReminders = async (
   if (notifications.length > 0) {
     await LocalNotifications.schedule({ notifications });
   }
+
+  // Also schedule morning daily lock screen digest if enabled
+  await scheduleDailyScheduleDigest(subjects, settings, records);
 };
 
 /**
@@ -163,14 +168,13 @@ export const scheduleDailyClassReminders = async (
 export const cancelTodayClassReminders = async (subjectId: string) => {
   try {
     const pending = await LocalNotifications.getPending();
-    const subHash = getSubjectHash(subjectId);
     const toCancel = pending.notifications
       .filter(n => {
         const isClassReminder = n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_THRESHOLD_BASE;
         const matchesSubject = n.extra?.subjectId === subjectId;
-        const isTodayReminder = (n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_DAILY_BASE + 10000) ||
-                                (n.id >= NOTIF_ID_POST_CLASS_BASE && n.id < NOTIF_ID_POST_CLASS_BASE + 10000);
-        return isClassReminder && (matchesSubject || (isTodayReminder && (n.id % 10000 >= subHash * 10 && n.id % 10000 < (subHash + 1) * 10)));
+        const isTodayReminder = (n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_DAILY_BASE + 100000) ||
+                                (n.id >= NOTIF_ID_POST_CLASS_BASE && n.id < NOTIF_ID_POST_CLASS_BASE + 100000);
+        return isClassReminder && matchesSubject && isTodayReminder;
       })
       .map(n => ({ id: n.id }));
 
@@ -178,7 +182,7 @@ export const cancelTodayClassReminders = async (subjectId: string) => {
       await LocalNotifications.cancel({ notifications: toCancel });
     }
   } catch (err) {
-    console.log('Failed to cancel today class reminders', err);
+    console.warn('Failed to cancel today class reminders', err);
   }
 };
 
@@ -202,7 +206,7 @@ export const handleAttendanceAlerts = async (
   const oldStats = calculateSubjectStats(subject, oldRecords, settings.semesterEndDate, settings.holidays);
   const newStats = calculateSubjectStats(subject, newRecords, settings.semesterEndDate, settings.holidays);
   
-  const threshold = (subject.threshold || settings.globalThreshold) * 100;
+  const threshold = (subject.threshold ?? settings.globalThreshold) * 100;
   const subjectHash = getSubjectHash(subject.id);
 
   // Threshold Alert: Just fell below threshold
@@ -210,7 +214,7 @@ export const handleAttendanceAlerts = async (
     await LocalNotifications.schedule({
       notifications: [
         {
-          title: 'Attendance Shortage!',
+          title: 'Attendance Shortage Warning',
           body: `Warning: Your attendance in ${subject.name} has fallen below ${Math.round(threshold)}%.`,
           id: NOTIF_ID_THRESHOLD_BASE + subjectHash,
           schedule: { at: new Date(Date.now() + 1000) }, // Immediate
@@ -223,7 +227,7 @@ export const handleAttendanceAlerts = async (
 
   // Bunk Budget Alert: Bunk budget dropped to 3 or fewer (or negative)
   if (oldStats.bunkBudget > 3 && newStats.bunkBudget <= 3) {
-    // Schedule for next morning 8AM per TRD §5
+    // Schedule for next morning 8AM per TRD Â§5
     const tomorrow8AM = new Date();
     tomorrow8AM.setDate(tomorrow8AM.getDate() + 1);
     tomorrow8AM.setHours(8, 0, 0, 0);
@@ -233,7 +237,7 @@ export const handleAttendanceAlerts = async (
       notifications: [
         {
           title: 'Low Bunk Budget Warning',
-          body: `${subject.name}: Only ${Math.max(0, newStats.bunkBudget)} bunks left before falling below threshold!`,
+          body: `${subject.name}: Only ${Math.max(0, newStats.bunkBudget)} bunks left before falling below threshold.`,
           id: NOTIF_ID_STATUS_BASE + subjectHash,
           schedule: { at: tomorrow8AM },
           smallIcon: 'ic_launcher',
@@ -263,17 +267,21 @@ export const scheduleSundaySummary = async (
 
   const nextSunday = new Date();
   const day = nextSunday.getDay();
-  const daysUntilSunday = (7 - day) % 7 || 7;
+  const daysUntilSunday = day === 0 ? 0 : 7 - day;
   nextSunday.setDate(nextSunday.getDate() + daysUntilSunday);
   nextSunday.setHours(20, 0, 0, 0);
+  // If it's already past 8 PM on Sunday, schedule for next Sunday
+  if (nextSunday.getTime() <= Date.now()) {
+    nextSunday.setDate(nextSunday.getDate() + 7);
+  }
 
   await LocalNotifications.cancel({ notifications: [{ id: NOTIF_ID_SUNDAY_SUMMARY }] });
 
   await LocalNotifications.schedule({
     notifications: [
       {
-        title: 'Weekly Bunk Summary',
-        body: `${atRiskSubjects.length} subject(s) are low on bunk budget. Plan next week carefully!`,
+        title: 'Weekly Attendance Summary',
+        body: `${atRiskSubjects.length} subject(s) are low on bunk budget. Review your schedule for the week.`,
         id: NOTIF_ID_SUNDAY_SUMMARY,
         schedule: { at: nextSunday },
         smallIcon: 'ic_launcher',
@@ -281,6 +289,76 @@ export const scheduleSundaySummary = async (
       }
     ]
   });
+};
+
+/**
+ * Morning Daily Schedule Digest Notification
+ * Delivers a crisp summary of today's scheduled classes and overall safe bunks buffer.
+ */
+export const scheduleDailyScheduleDigest = async (
+  subjects: Subject[],
+  settings: AppSettings,
+  records: AttendanceRecord[] = []
+) => {
+  try {
+    const pending = await LocalNotifications.getPending();
+    const digestPending = pending.notifications
+      .filter(n => n.id >= NOTIF_ID_DAILY_DIGEST && n.id < NOTIF_ID_DAILY_DIGEST + 100)
+      .map(n => ({ id: n.id }));
+
+    if (digestPending.length > 0) {
+      await LocalNotifications.cancel({ notifications: digestPending });
+    }
+  } catch (err) {
+    console.warn('Failed to clear pending digest notifications:', err);
+  }
+
+  if (!settings.notificationsEnabled || !settings.dailyScheduleDigest || settings.holidayMode) {
+    return;
+  }
+
+  const [digestHour, digestMin] = (settings.dailyDigestTime || '07:30').split(':').map(Number);
+  const now = new Date();
+
+  // Schedule for each of the next 7 days
+  const digestNotifs: LocalNotificationSchema[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const targetDate = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+    const dayOfWeek = targetDate.getDay();
+    const dateStr = toISODateStr(targetDate);
+
+    // Skip if holiday
+    const isHoliday = settings.holidays?.some(h => dateStr >= h.startDate && dateStr <= h.endDate);
+    if (isHoliday) continue;
+
+    // Count today's classes
+    const classesToday = subjects.filter(s => s.schedule.some(sc => Number(sc.day) === dayOfWeek));
+    if (classesToday.length === 0) continue;
+
+    const notifDate = new Date(targetDate);
+    notifDate.setHours(digestHour || 7, digestMin || 30, 0, 0);
+
+    if (notifDate.getTime() > now.getTime()) {
+      let totalSafeBunks = 0;
+      subjects.forEach(s => {
+        const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
+        totalSafeBunks += Math.max(0, stats.bunkBudget);
+      });
+
+      digestNotifs.push({
+        title: `Today's Schedule: ${classesToday.length} Classes`,
+        body: `${classesToday.map(c => c.name).join(', ')} â€¢ ${totalSafeBunks} safe bunks remaining.`,
+        id: NOTIF_ID_DAILY_DIGEST + offset,
+        schedule: { at: notifDate },
+        smallIcon: 'ic_launcher',
+        iconColor: '#3B82F6',
+      });
+    }
+  }
+
+  if (digestNotifs.length > 0) {
+    await LocalNotifications.schedule({ notifications: digestNotifs });
+  }
 };
 
 // Cancel all notifications for a specific subject
@@ -294,3 +372,4 @@ export const cancelSubjectNotifications = async (subjectId: string) => {
   });
   await cancelPostClassReminder(subjectId);
 };
+

@@ -16,7 +16,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
   const { settings } = useSettings();
   const [name, setName] = useState(subject?.name || '');
   const [credits, setCredits] = useState(subject?.credits || 3);
-  const [isLab, setIsLab] = useState<boolean>(subject?.isLab || (subject as any)?.labMultiplier === 2 || false);
+  const [isLab, setIsLab] = useState<boolean>(Boolean(subject?.isLab));
+  const [room, setRoom] = useState(subject?.room || '');
+  const [faculty, setFaculty] = useState(subject?.faculty || '');
   
   // New state: Use custom time per day
   const [useCustomTime, setUseCustomTime] = useState(
@@ -85,9 +87,13 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
       credits,
       threshold,
       isLab,
+      room: room.trim() || undefined,
+      faculty: faculty.trim() || undefined,
       schedule: days.map(day => ({ 
         day, 
-        slot: useCustomTime ? scheduleMap[day] : globalSlot 
+        slot: useCustomTime ? scheduleMap[day] : globalSlot,
+        room: room.trim() || undefined,
+        faculty: faculty.trim() || undefined,
       })),
       attendedSoFar: Math.max(0, attendedSoFar),
       missedSoFar: Math.max(0, missedSoFar),
@@ -115,7 +121,7 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
       <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200 dark:border-slate-800 p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
         <header className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{subject ? 'Edit Subject' : 'Add New Subject'}</h2>
-          <button onClick={onCancel} className="text-slate-400 dark:text-slate-500 p-2">
+          <button onClick={onCancel} aria-label="Close" className="text-slate-400 dark:text-slate-500 p-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -135,6 +141,29 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
             />
           </div>
           
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Room / Hall (Optional)</label>
+              <input 
+                placeholder="e.g. Room 304" 
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                maxLength={25}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Faculty (Optional)</label>
+              <input 
+                placeholder="e.g. Prof. Sharma" 
+                value={faculty}
+                onChange={(e) => setFaculty(e.target.value)}
+                maxLength={30}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+              />
+            </div>
+          </div>
+
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Credits</label>
@@ -193,6 +222,8 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
             </div>
             <button 
               onClick={() => setUseCustomTime(!useCustomTime)}
+              role="switch"
+              aria-checked={useCustomTime}
               className={`w-12 h-6 rounded-full transition-colors relative ${useCustomTime ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useCustomTime ? 'left-7' : 'left-1'}`}></div>

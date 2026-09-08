@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AttendanceRecord } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
 import { handleAttendanceAlerts, scheduleDailyClassReminders } from '../lib/notifications';
+import { syncWidgetData } from '../lib/widgetData';
 import { useSubjects } from './useSubjects';
 import { useSettings } from './useSettings';
 
@@ -19,24 +20,35 @@ interface AttendanceState {
   clearLastAction: () => void;
   loadRecords: () => Promise<void>;
   getStreak: () => number;
+  deleteRecordsForSubject: (subjectId: string) => Promise<void>;
 }
 
 export const useAttendance = create<AttendanceState>((set, get) => ({
   records: [],
   lastAction: null,
   markAttendance: async (record) => {
-    const oldRecords = get().records;
-    const previousRecord = oldRecords.find(
-      r => r.subjectId === record.subjectId && r.date === record.date
-    ) || null;
-    const filtered = oldRecords.filter(r => !(r.subjectId === record.subjectId && r.date === record.date));
-    const newRecords = [...filtered, record];
+    let oldRecords: AttendanceRecord[] = [];
+    let newRecords: AttendanceRecord[] = [];
+    let previousRecord: AttendanceRecord | null = null;
     
-    set({ 
-      records: newRecords,
-      lastAction: { record, previousRecord }
+    set((state) => {
+      oldRecords = state.records;
+      previousRecord = oldRecords.find(
+        r => r.subjectId === record.subjectId && r.date === record.date
+      ) || null;
+      const filtered = oldRecords.filter(r => !(r.subjectId === record.subjectId && r.date === record.date));
+      newRecords = [...filtered, record];
+      return { 
+        records: newRecords,
+        lastAction: { record, previousRecord }
+      };
     });
-    await saveToStorage('attendance_records', newRecords);
+
+    try {
+      await saveToStorage('attendance_records', newRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
 
     // Advanced Notifications logic
     const allSubjects = useSubjects.getState().subjects;
@@ -52,19 +64,34 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     }
     // Re-sync scheduled class reminders to ensure already-marked classes are excluded
     await scheduleDailyClassReminders(allSubjects, settings, newRecords);
+    await syncWidgetData(allSubjects, newRecords, settings);
   },
   unmarkAttendance: async (id) => {
-    const oldRecords = get().records;
-    const record = oldRecords.find(r => r.id === id);
-    const newRecords = oldRecords.filter((r) => r.id !== id);
+    let oldRecords: AttendanceRecord[] = [];
+    let newRecords: AttendanceRecord[] = [];
+    let record: AttendanceRecord | undefined;
     
-    set({ records: newRecords });
-    await saveToStorage('attendance_records', newRecords);
+    set((state) => {
+      oldRecords = state.records;
+      record = oldRecords.find(r => r.id === id);
+      newRecords = oldRecords.filter((r) => r.id !== id);
+      return { 
+        records: newRecords,
+        lastAction: record ? { record, previousRecord: record } : null
+      };
+    });
+    
+    try {
+      await saveToStorage('attendance_records', newRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
 
     const allSubjects = useSubjects.getState().subjects;
     const settings = useSettings.getState().settings;
-    if (record) {
-      const subject = allSubjects.find(s => s.id === record.subjectId);
+    const targetRecord = record;
+    if (targetRecord) {
+      const subject = allSubjects.find(s => s.id === targetRecord.subjectId);
       if (subject) {
         await handleAttendanceAlerts(
           subject, 
@@ -75,30 +102,59 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       }
     }
     await scheduleDailyClassReminders(allSubjects, settings, newRecords);
+    await syncWidgetData(allSubjects, newRecords, settings);
   },
   undoLastAction: async () => {
-    const { lastAction, records } = get();
+    const { lastAction } = get();
     if (!lastAction) return;
 
     const { record, previousRecord } = lastAction;
-    // Remove the action we just took
-    let newRecords = records.filter(
-      r => !(r.subjectId === record.subjectId && r.date === record.date)
-    );
-    // Restore the previous record if one existed
-    if (previousRecord) {
-      newRecords = [...newRecords, previousRecord];
-    }
+    let oldRecords: AttendanceRecord[] = [];
+    let newRecords: AttendanceRecord[] = [];
 
-    set({ records: newRecords, lastAction: null });
-    await saveToStorage('attendance_records', newRecords);
+    set((state) => {
+      oldRecords = state.records;
+      newRecords = oldRecords.filter(
+        r => !(r.subjectId === record.subjectId && r.date === record.date)
+      );
+      if (previousRecord) {
+        newRecords = [...newRecords, previousRecord];
+      }
+      return { records: newRecords, lastAction: null };
+    });
+
+    try {
+      await saveToStorage('attendance_records', newRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
 
     const allSubjects = useSubjects.getState().subjects;
     const settings = useSettings.getState().settings;
+
+    // Sync threshold alerts after undo
+    const subject = allSubjects.find(s => s.id === record.subjectId);
+    if (subject) {
+      await handleAttendanceAlerts(subject, oldRecords, newRecords, settings);
+    }
+
     await scheduleDailyClassReminders(allSubjects, settings, newRecords);
+    await syncWidgetData(allSubjects, newRecords, settings);
   },
   clearLastAction: () => {
     set({ lastAction: null });
+  },
+  deleteRecordsForSubject: async (subjectId) => {
+    set((state) => ({
+      records: state.records.filter(r => r.subjectId !== subjectId),
+      lastAction: null,
+    }));
+    const newRecords = get().records;
+    try {
+      await saveToStorage('attendance_records', newRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
   },
   loadRecords: async () => {
     const stored = await getFromStorage<AttendanceRecord[]>('attendance_records');

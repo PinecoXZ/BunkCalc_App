@@ -4,11 +4,29 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { calculateSubjectStats } from './calculations';
-import type { Subject, AttendanceRecord } from './types';
+import type { Subject, AttendanceRecord, AppSettings } from './types';
+import { APP_VERSION_NAME } from './constants';
+
+const escapeHtml = (str: string): string =>
+  str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const escapeCsvField = (field: string): string => {
+  if (/[,"\n\r]/.test(field) || /^[=+\-@\t\r]/.test(field)) {
+    return `"${field.replace(/"/g, '""')}"`;
+  }
+  return field;
+};
+
+const toBase64 = (str: string): string => {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+};
 
 const STORAGE_VERSION = 3;
 
-export const saveToStorage = async (key: string, value: any) => {
+export const saveToStorage = async (key: string, value: unknown) => {
   await Preferences.set({
     key,
     value: JSON.stringify(value),
@@ -20,9 +38,6 @@ export const getFromStorage = async <T>(key: string): Promise<T | null> => {
   return value ? JSON.parse(value) : null;
 };
 
-export const removeFromStorage = async (key: string) => {
-  await Preferences.remove({ key });
-};
 
 export const clearAllStorage = async () => {
   await Preferences.clear();
@@ -36,7 +51,7 @@ export const migrateStorageIfNeeded = async () => {
   const version = await getFromStorage<number>('storage_version');
 
   if (!version || version < 2) {
-    // v1 → v2: Initialize archived_semesters if missing
+    // v1 â†’ v2: Initialize archived_semesters if missing
     const existing = await getFromStorage('archived_semesters');
     if (!existing) {
       await saveToStorage('archived_semesters', []);
@@ -44,8 +59,8 @@ export const migrateStorageIfNeeded = async () => {
   }
 
   if (!version || version < 3) {
-    // v2 → v3: Patch subjects with default attendedSoFar: 0 and missedSoFar: 0 if undefined
-    const storedSubjects = await getFromStorage<any[]>('subjects');
+    // v2 â†’ v3: Patch subjects with default attendedSoFar: 0 and missedSoFar: 0 if undefined
+    const storedSubjects = await getFromStorage<Subject[]>('subjects');
     if (storedSubjects && Array.isArray(storedSubjects)) {
       const patchedSubjects = storedSubjects.map((s) => ({
         ...s,
@@ -70,7 +85,7 @@ export const exportAppState = async () => {
     settings,
     archived_semesters: archived,
     exportedAt: new Date().toISOString(),
-    version: '2.0.0'
+    version: APP_VERSION_NAME
   };
 
   const fileName = `bunkcalc_backup_${new Date().toLocaleDateString('en-CA')}.json`;
@@ -78,7 +93,7 @@ export const exportAppState = async () => {
   if (Capacitor.isNativePlatform()) {
     try {
       const jsonStr = JSON.stringify(data, null, 2);
-      const base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
+      const base64Data = toBase64(jsonStr);
       
       const savedFile = await Filesystem.writeFile({
         path: fileName,
@@ -110,7 +125,7 @@ export const exportAppState = async () => {
   URL.revokeObjectURL(url);
 };
 
-export const importAppState = async (file: File): Promise<any> => {
+export const importAppState = async (file: File): Promise<unknown> => {
   if (file.size > 5 * 1024 * 1024) {
     throw new Error("File size exceeds 5 MB limit.");
   }
@@ -148,11 +163,12 @@ export const exportToCSV = async () => {
   const attendance = (await getFromStorage<AttendanceRecord[]>('attendance_records')) || [];
   
   const header = 'Date,Subject,Status,Credits';
+  const subjectMap = new Map(subjects.map(s => [s.id, s]));
   const rows = [...attendance].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(record => {
-    const subject = subjects.find(s => s.id === record.subjectId);
+    const subject = subjectMap.get(record.subjectId);
     const subjectName = subject ? subject.name : 'Unknown';
     const credits = subject ? subject.credits : 0;
-    return `${record.date},${subjectName},${record.status},${credits}`;
+    return `${record.date},${escapeCsvField(subjectName)},${record.status},${credits}`;
   });
   
   const csvContent = [header, ...rows].join('\n');
@@ -160,7 +176,7 @@ export const exportToCSV = async () => {
   
   if (Capacitor.isNativePlatform()) {
     try {
-      const base64Data = btoa(unescape(encodeURIComponent(csvContent)));
+      const base64Data = toBase64(csvContent);
       
       const savedFile = await Filesystem.writeFile({
         path: fileName,
@@ -195,7 +211,7 @@ export const exportToCSV = async () => {
 export const exportToPDF = async () => {
   const subjects = (await getFromStorage<Subject[]>('subjects')) || [];
   const attendance = (await getFromStorage<AttendanceRecord[]>('attendance_records')) || [];
-  const settings = await getFromStorage<any>('app_settings');
+  const settings = await getFromStorage<AppSettings>('app_settings');
   
   let html = `<!DOCTYPE html>
     <html>
@@ -231,7 +247,7 @@ export const exportToPDF = async () => {
     const stats = calculateSubjectStats(subject, attendance, settings?.semesterEndDate, settings?.holidays);
     html += `
       <tr>
-        <td><strong>${subject.name}</strong>${subject.isLab ? ' (Lab)' : ''}</td>
+        <td><strong>${escapeHtml(subject.name)}</strong>${subject.isLab ? ' (Lab)' : ''}</td>
         <td>${stats.attendedCount} / ${stats.totalClasses}</td>
         <td>${stats.attendancePct.toFixed(1)}%</td>
         <td>${stats.bunkBudget >= 0 ? `${stats.bunkBudget} safe` : `Need ${stats.classesNeededToRecover}`}</td>
@@ -242,7 +258,7 @@ export const exportToPDF = async () => {
   html += `
           </tbody>
         </table>
-        <div class="footer">Generated by BunkCalc — Smart Attendance Tracker</div>
+        <div class="footer">Generated by BunkCalc â€” Smart Attendance Tracker</div>
       </body>
     </html>
   `;
@@ -251,7 +267,7 @@ export const exportToPDF = async () => {
 
   if (Capacitor.isNativePlatform()) {
     try {
-      const base64Data = btoa(unescape(encodeURIComponent(html)));
+      const base64Data = toBase64(html);
       const savedFile = await Filesystem.writeFile({
         path: fileName,
         data: base64Data,
@@ -288,4 +304,5 @@ export const exportToPDF = async () => {
     URL.revokeObjectURL(url);
   }
 };
+
 

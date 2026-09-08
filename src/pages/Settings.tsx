@@ -1,40 +1,62 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { useSettings } from '../store/useSettings';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
-import { exportAppState, importAppState, clearAllStorage, saveToStorage, exportToCSV, exportToPDF } from '../lib/storage';
-import HelpTooltip from '../components/HelpTooltip';
+import { saveToStorage } from '../lib/storage';
 import ThemedIcon from '../components/ThemedIcon';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { v4 as uuidv4 } from 'uuid';
-import type { ArchivedSemester, Holiday } from '../lib/types';
+import type { ArchivedSemester } from '../lib/types';
 import { calculateSubjectStats } from '../lib/calculations';
 import { AppModal } from '../components/AppModal';
 import { sanitizeName, validateArchiveName } from '../lib/validation';
-import { ensureNotificationPermission } from '../lib/permissions';
-import { parseICSFile, HOLIDAY_PRESETS } from '../lib/icsParser';
 import { TimetableShareModal } from '../components/TimetableShareModal';
+import { PinSetupModal } from '../components/PinSetupModal';
+import { APP_VERSION_NAME } from '../lib/constants';
+import { registerBackHandler } from '../lib/backHandler';
+
+import SubHeader from '../components/settings/SubHeader';
+import AcademicSettings from '../components/settings/AcademicSettings';
+import HolidaySettings from '../components/settings/HolidaySettings';
+import SyncSettings from '../components/settings/SyncSettings';
+import NotificationSettings from '../components/settings/NotificationSettings';
+import SecuritySettings from '../components/settings/SecuritySettings';
+import AppearanceSettings from '../components/settings/AppearanceSettings';
+import SubjectSettings from '../components/settings/SubjectSettings';
+import DataSettings from '../components/settings/DataSettings';
+import AboutSettings from '../components/settings/AboutSettings';
 
 const LegalModal = lazy(() => import('../components/LegalModal'));
 const FaqSection = lazy(() => import('../components/FaqSection'));
 
 import { Share } from '@capacitor/share';
 
+type SubPage = 
+  | 'academic'
+  | 'holidays'
+  | 'sync'
+  | 'notifications'
+  | 'security'
+  | 'appearance'
+  | 'subjects'
+  | 'data'
+  | 'faq'
+  | 'about'
+  | null;
+
 const Settings: React.FC = () => {
   const { settings, setSettings, addHoliday, updateHoliday, deleteHoliday, archivedSemesters, archiveSemester, deleteArchivedSemester } = useSettings();
   const { subjects, deleteSubject } = useSubjects();
   const { records } = useAttendance();
+  const [activeSubPage, setActiveSubPage] = useState<SubPage>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pinModalMode, setPinModalMode] = useState<'set' | 'change' | null>(null);
+
   const [legal, setLegal] = useState<{ title: string; type: 'privacy' | 'terms' } | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveName, setArchiveName] = useState('');
   const [showArchivedList, setShowArchivedList] = useState(false);
   const [showTimetableShare, setShowTimetableShare] = useState(false);
-
-  // Holiday Manager State
-  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
-  const [holidayName, setHolidayName] = useState('');
-  const [holidayStart, setHolidayStart] = useState('');
-  const [holidayEnd, setHolidayEnd] = useState('');
 
   // AppModal State
   const [modal, setModal] = useState<{
@@ -48,44 +70,62 @@ const Settings: React.FC = () => {
     onCancel?: () => void;
   } | null>(null);
 
-  const handleRequestPermission = async () => {
-    const granted = await ensureNotificationPermission();
-    if (granted) {
-      setModal({
-        isOpen: true,
-        title: "Success",
-        message: "Notifications enabled successfully!",
-        type: "success",
-        confirmText: "OK",
-        onConfirm: () => setModal(null)
-      });
-    } else {
-      setModal({
-        isOpen: true,
-        title: "Permission Denied",
-        message: "Permission denied. Please enable notifications in your phone settings.",
-        type: "error",
-        confirmText: "OK",
-        onConfirm: () => setModal(null)
-      });
+  // Hardware Back Button listener for subpages & modals in Settings
+  useEffect(() => {
+    if (!activeSubPage && !legal && !showArchiveModal && !showTimetableShare && !pinModalMode && !modal && !showArchivedList) {
+      return;
     }
-  };
+
+    const unregister = registerBackHandler(() => {
+      if (modal) {
+        setModal(null);
+        return true;
+      }
+      if (legal) {
+        setLegal(null);
+        return true;
+      }
+      if (showArchiveModal) {
+        setShowArchiveModal(false);
+        return true;
+      }
+      if (showArchivedList) {
+        setShowArchivedList(false);
+        return true;
+      }
+      if (showTimetableShare) {
+        setShowTimetableShare(false);
+        return true;
+      }
+      if (pinModalMode) {
+        setPinModalMode(null);
+        return true;
+      }
+      if (activeSubPage) {
+        setActiveSubPage(null);
+        return true;
+      }
+      return false;
+    });
+
+    return unregister;
+  }, [activeSubPage, legal, showArchiveModal, showArchivedList, showTimetableShare, pinModalMode, modal]);
 
   const handleShare = async () => {
     try {
       await Share.share({
         title: 'BunkCalc — Smart Attendance Tracker',
-        text: '🚀 Bunking classes without stressing about attendance? Try BunkCalc!\n\nCalculate your safe bunk budget in real-time, get danger-zone alerts, and stay safe without detention risk. 🎓✨\n\nCheck it out here:',
+        text: 'Bunking classes without stressing about attendance? Try BunkCalc!\n\nCalculate your safe bunk budget in real-time, get danger-zone alerts, and stay safe without detention risk.\n\nCheck it out here:',
         url: 'https://bunk-calc-web.vercel.app/',
         dialogTitle: 'Share BunkCalc with Friends',
       });
     } catch (err) {
-      console.log('Sharing failed', err);
+      console.warn('Sharing failed', err);
     }
   };
 
   const handleFeedback = () => {
-    window.location.href = 'mailto:support@bunkcalc.app?subject=BunkCalc Feedback v2.0.0';
+    window.location.href = `mailto:support@bunkcalc.app?subject=BunkCalc Feedback v${APP_VERSION_NAME}`;
   };
 
   const handleRate = () => {
@@ -115,75 +155,6 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const inputElement = e.target;
-    if (file) {
-      setModal({
-        isOpen: true,
-        title: "Overwrite Data",
-        message: "Importing data will overwrite your current settings and attendance. Continue?",
-        type: "confirm",
-        confirmText: "Overwrite",
-        cancelText: "Cancel",
-        onConfirm: async () => {
-          setModal(null);
-          try {
-            await importAppState(file);
-            inputElement.value = '';
-            setModal({
-              isOpen: true,
-              title: "Data Restored",
-              message: "Data restored successfully! Please restart the app.",
-              type: "success",
-              confirmText: "OK",
-              onConfirm: () => {
-                setModal(null);
-                window.location.reload();
-              }
-            });
-          } catch (err: any) {
-            setModal({
-              isOpen: true,
-              title: "Import Failed",
-              message: err.message || "Failed to import data. Please ensure the file is a valid BunkCalc backup.",
-              type: "error",
-              confirmText: "OK",
-              onConfirm: () => setModal(null)
-            });
-          }
-        },
-        onCancel: () => setModal(null)
-      });
-    }
-  };
-
-  const handleReset = async () => {
-    setModal({
-      isOpen: true,
-      title: "Factory Reset",
-      message: "⚠️ This will permanently delete ALL your subjects, attendance records, and settings. This action cannot be undone.\n\nAre you sure you want to reset?",
-      type: "confirm",
-      confirmText: "Reset",
-      cancelText: "Cancel",
-      onConfirm: async () => {
-        try {
-          await clearAllStorage();
-          window.location.reload();
-        } catch {
-          setModal({
-            isOpen: true,
-            title: "Reset Failed",
-            message: "Failed to reset app data. Please try again.",
-            type: "error",
-            confirmText: "OK",
-            onConfirm: () => setModal(null)
-          });
-        }
-      },
-      onCancel: () => setModal(null)
-    });
-  };
 
   const handleArchiveSemester = async () => {
     const sanitized = sanitizeName(archiveName);
@@ -234,785 +205,455 @@ const Settings: React.FC = () => {
     window.location.reload();
   };
 
+
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-24">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold">Settings</h1>
-      </header>
-
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Academic</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-28">
+      {/* ── ROOT SETTINGS DASHBOARD ── */}
+      {activeSubPage === null && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          <header className="space-y-3">
             <div>
-              <div className="flex items-center gap-1.5">
-                <p className="font-bold text-sm">Attendance Threshold</p>
-                <HelpTooltip
-                  title="Attendance Threshold"
-                  content="The target percentage required by your college or university (e.g. 75% or 80%). Your bunk budget is calculated based on this."
-                />
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Minimum required percentage</p>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Settings</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mt-1">
+                Configuration &amp; Academic Preferences
+              </p>
             </div>
-            <select 
-              value={Math.round(settings.globalThreshold * 100)}
-              onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-            >
-              {[60, 65, 70, 75, 80, 85, 90].map(val => (
-                <option key={val} value={val}>{val}%</option>
-              ))}
-            </select>
-          </div>
 
-          <div className="p-4 flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="font-bold text-sm">Danger Zone Buffer</p>
-                <HelpTooltip
-                  title="Danger Zone Buffer"
-                  content="Buffer percentage above your threshold that triggers warning banners before you fall below the required attendance."
-                />
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Alert threshold above minimum</p>
-            </div>
-            <select 
-              value={Math.round(settings.warningBuffer * 100)}
-              onChange={(e) => setSettings({ ...settings, warningBuffer: Number(e.target.value) / 100 })}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-            >
-              {[2, 3, 5, 7, 10].map(val => (
-                <option key={val} value={val}>{val}%</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 mb-1">
-              <p className="font-bold text-sm">Semester End Date</p>
-              <HelpTooltip
-                title="Semester End Date"
-                content="Defines how many remaining classes exist in the semester pool to compute exact safe bunks."
-              />
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Shared semester timeline for all subjects</p>
-            <input 
-              type="date" 
-              value={settings.semesterEndDate.split('T')[0]}
-              onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* College Holidays & Exam Calendar Manager */}
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">College Holidays & Exam Breaks</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Add official college holidays or exam breaks. Dates inside these ranges are automatically excluded from your remaining class budget.
-          </p>
-
-          <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl space-y-3">
-            {editingHoliday && (
-              <div className="flex justify-between items-center bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 font-bold">
-                <span>✏️ Editing "{editingHoliday.name}"</span>
-                <button 
-                  onClick={() => {
-                    setEditingHoliday(null);
-                    setHolidayName('');
-                    setHolidayStart('');
-                    setHolidayEnd('');
-                  }}
-                  className="text-[10px] underline hover:text-blue-700 dark:hover:text-blue-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-                {editingHoliday ? 'Edit Break Name' : 'Break Name'}
-              </label>
-              <input 
-                placeholder="e.g. Diwali Vacation" 
-                value={holidayName}
-                onChange={(e) => setHolidayName(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Start Date</label>
-                <input 
-                  type="date"
-                  value={holidayStart}
-                  onChange={(e) => {
-                    setHolidayStart(e.target.value);
-                    if (!holidayEnd) setHolidayEnd(e.target.value);
-                  }}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">End Date</label>
-                <input 
-                  type="date"
-                  value={holidayEnd}
-                  onChange={(e) => setHolidayEnd(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-            
-            {editingHoliday ? (
-              <div className="flex gap-2">
-                <button 
-                  disabled={!holidayName.trim() || !holidayStart || !holidayEnd}
-                  onClick={() => {
-                    const sanitized = sanitizeName(holidayName);
-                    if (!sanitized) return;
-                    updateHoliday({
-                      id: editingHoliday.id,
-                      name: sanitized,
-                      startDate: holidayStart,
-                      endDate: holidayEnd >= holidayStart ? holidayEnd : holidayStart,
-                    });
-                    setEditingHoliday(null);
-                    setHolidayName('');
-                    setHolidayStart('');
-                    setHolidayEnd('');
-                  }}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider disabled:opacity-50 transition-all shadow-md shadow-emerald-500/20"
-                >
-                  ✓ Save Changes
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingHoliday(null);
-                    setHolidayName('');
-                    setHolidayStart('');
-                    setHolidayEnd('');
-                  }}
-                  className="px-4 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button 
-                disabled={!holidayName.trim() || !holidayStart || !holidayEnd}
-                onClick={() => {
-                  const sanitized = sanitizeName(holidayName);
-                  if (!sanitized) return;
-                  addHoliday({
-                    id: uuidv4(),
-                    name: sanitized,
-                    startDate: holidayStart,
-                    endDate: holidayEnd >= holidayStart ? holidayEnd : holidayStart,
-                  });
-                  setHolidayName('');
-                  setHolidayStart('');
-                  setHolidayEnd('');
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider disabled:opacity-50 transition-all shadow-md shadow-blue-500/20"
-              >
-                + Add Holiday Break
-              </button>
-            )}
-
-            {/* Academic Calendar Presets & ICS Import */}
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex flex-col gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Quick Calendar Presets & Import
-              </span>
-              <div className="flex gap-2">
-                <select
-                  onChange={(e) => {
-                    const presetIndex = Number(e.target.value);
-                    if (isNaN(presetIndex) || presetIndex < 0) return;
-                    const preset = HOLIDAY_PRESETS[presetIndex];
-                    if (!preset) return;
-                    preset.holidays.forEach(h => {
-                      addHoliday({
-                        id: uuidv4(),
-                        name: h.name,
-                        startDate: h.startDate,
-                        endDate: h.endDate,
-                      });
-                    });
-                    setModal({
-                      isOpen: true,
-                      title: "Preset Applied",
-                      message: `Added ${preset.holidays.length} holiday breaks from "${preset.name}".`,
-                      type: "success",
-                      confirmText: "Great!",
-                      onConfirm: () => setModal(null)
-                    });
-                    e.target.value = "";
-                  }}
-                  defaultValue=""
-                  className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
-                >
-                  <option value="" disabled>⚡ Load Indian College Presets</option>
-                  {HOLIDAY_PRESETS.map((p, idx) => (
-                    <option key={idx} value={idx}>{p.name}</option>
-                  ))}
-                </select>
-
-                <label className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors">
-                  <span>📅</span> .ics
-                  <input
-                    type="file"
-                    accept=".ics,text/calendar"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const text = await file.text();
-                        const parsed = parseICSFile(text);
-                        if (parsed.length === 0) {
-                          setModal({
-                            isOpen: true,
-                            title: "No Events Found",
-                            message: "Could not find valid calendar events in this .ics file.",
-                            type: "error",
-                            confirmText: "OK",
-                            onConfirm: () => setModal(null)
-                          });
-                          return;
-                        }
-                        parsed.forEach(h => addHoliday(h));
-                        setModal({
-                          isOpen: true,
-                          title: "Calendar Imported",
-                          message: `Successfully imported ${parsed.length} academic holidays from your .ics file!`,
-                          type: "success",
-                          confirmText: "Done",
-                          onConfirm: () => setModal(null)
-                        });
-                      } catch {
-                        setModal({
-                          isOpen: true,
-                          title: "Import Error",
-                          message: "Failed to parse the calendar file.",
-                          type: "error",
-                          confirmText: "OK",
-                          onConfirm: () => setModal(null)
-                        });
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* List of Configured Holidays */}
-          <div className="space-y-2">
-            {(!settings.holidays || settings.holidays.length === 0) ? (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-600 italic py-2">No holidays configured.</p>
-            ) : (
-              settings.holidays.map((h) => (
-                <div 
-                  key={h.id} 
-                  className={`flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border text-xs transition-all ${
-                    editingHoliday?.id === h.id 
-                      ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' 
-                      : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  <div>
-                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      {h.name}
-                      {editingHoliday?.id === h.id && (
-                        <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.2 rounded-full font-bold">Editing</span>
-                      )}
-                    </p>
-                    <p className="text-[10px] text-slate-500">{h.startDate} to {h.endDate}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => {
-                        setEditingHoliday(h);
-                        setHolidayName(h.name);
-                        setHolidayStart(h.startDate);
-                        setHolidayEnd(h.endDate);
-                      }}
-                      title="Edit Holiday"
-                      className="text-blue-500 hover:text-blue-600 p-1.5 hover:bg-blue-500/10 rounded-lg transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (editingHoliday?.id === h.id) {
-                          setEditingHoliday(null);
-                          setHolidayName('');
-                          setHolidayStart('');
-                          setHolidayEnd('');
-                        }
-                        deleteHoliday(h.id);
-                      }}
-                      title="Delete Holiday"
-                      className="text-red-500 hover:text-red-600 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Smart Notifications</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-            <div>
-              <p className="font-bold text-sm">Push Notifications</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Master toggle for alerts & reminders</p>
-            </div>
-            <button 
-              onClick={() => setSettings({ ...settings, notificationsEnabled: !settings.notificationsEnabled })}
-              className={`w-12 h-6 rounded-full transition-colors relative ${settings.notificationsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.notificationsEnabled ? 'left-7' : 'left-1'}`}></div>
-            </button>
-          </div>
-
-          {settings.notificationsEnabled && (
-            <>
-              {/* Pre-Class Reminders */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm">Pre-Class Reminders</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Alert before class starts</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <select 
-                    value={settings.reminderMinutesBefore}
-                    onChange={(e) => setSettings({ ...settings, reminderMinutesBefore: Number(e.target.value) as 5 | 10 | 15 | 30 })}
-                    className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                  >
-                    <option value={5}>5 mins</option>
-                    <option value={10}>10 mins</option>
-                    <option value={15}>15 mins</option>
-                    <option value={30}>30 mins</option>
-                  </select>
-                  <button 
-                    onClick={() => setSettings({ ...settings, preClassReminder: settings.preClassReminder === false ? true : false })}
-                    className={`w-10 h-5 rounded-full transition-colors relative ${settings.preClassReminder !== false ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${settings.preClassReminder !== false ? 'left-5.5' : 'left-0.5'}`}></div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Post-Class Attendance Prompts */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm">Post-Class Prompts</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Prompt to mark attendance after lecture</p>
-                </div>
-                <button 
-                  onClick={() => setSettings({ ...settings, postClassReminder: settings.postClassReminder === false ? true : false })}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.postClassReminder !== false ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.postClassReminder !== false ? 'left-7' : 'left-1'}`}></div>
-                </button>
-              </div>
-
-              {/* Sunday Night Risk Summary */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm">Sunday Risk Summary</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Weekly 8 PM recap for low-budget subjects</p>
-                </div>
-                <button 
-                  onClick={() => setSettings({ ...settings, sundaySummaryNotification: settings.sundaySummaryNotification === false ? true : false })}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.sundaySummaryNotification !== false ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.sundaySummaryNotification !== false ? 'left-7' : 'left-1'}`}></div>
-                </button>
-              </div>
-
-              {/* Holiday Mode */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm">Holiday Mode</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Pause all reminders during breaks</p>
-                </div>
-                <button 
-                  onClick={() => setSettings({ ...settings, holidayMode: !settings.holidayMode })}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.holidayMode ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.holidayMode ? 'left-7' : 'left-1'}`}></div>
-                </button>
-              </div>
-
-              <div className="p-4 bg-blue-500/5 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm text-blue-600 dark:text-blue-400">System Permissions</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">Required for device alarms & popups</p>
-                </div>
-                <button 
-                  onClick={handleRequestPermission}
-                  className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-2 rounded-lg shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-                >
-                  Request Access
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Appearance & Theme</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800">
-          {/* Mode Selector */}
-          <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="font-bold text-sm">Theme Mode</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">App appearance style</p>
-            </div>
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1 overflow-x-auto">
-              {[
-                { id: 'light', label: 'Light' },
-                { id: 'dark', label: 'Dark' },
-                { id: 'oled', label: 'Pitch OLED' },
-                { id: 'system', label: 'Auto' }
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setSettings({ ...settings, theme: t.id as any })}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${
-                    settings.theme === t.id 
-                      ? 'bg-blue-600 text-white shadow-md' 
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Accent Color Picker */}
-          <div className="p-4 flex justify-between items-center">
-            <div>
-              <p className="font-bold text-sm">Accent Theme</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Primary UI highlight color</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {[
-                { id: 'blue', color: 'bg-blue-500', name: 'Classic Blue' },
-                { id: 'purple', color: 'bg-purple-500', name: 'Neon Purple' },
-                { id: 'emerald', color: 'bg-emerald-500', name: 'Emerald Green' },
-                { id: 'amber', color: 'bg-amber-500', name: 'Gold Amber' },
-                { id: 'rose', color: 'bg-rose-500', name: 'Rose Red' }
-              ].map((acc) => (
-                <button
-                  key={acc.id}
-                  title={acc.name}
-                  onClick={() => setSettings({ ...settings, themeAccent: acc.id as any })}
-                  className={`w-6 h-6 rounded-full ${acc.color} transition-transform ${
-                    (settings.themeAccent || 'blue') === acc.id 
-                      ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110' 
-                      : 'opacity-70 hover:opacity-100'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-          {/* Haptic Feedback */}
-          <div className="p-4 flex justify-between items-center">
-            <div>
-              <p className="font-bold text-sm">Haptic Feedback</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Subtle vibrations on interaction</p>
-            </div>
-            <button 
-              onClick={() => setSettings({ ...settings, hapticsEnabled: !settings.hapticsEnabled })}
-              className={`w-12 h-6 rounded-full transition-colors relative ${settings.hapticsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.hapticsEnabled ? 'left-7' : 'left-1'}`}></div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Data Management</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <button 
-            onClick={exportAppState}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">Backup</span>
-          </button>
-          
-          <label className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">Restore</span>
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-          </label>
-
-          <button 
-            onClick={handleReset}
-            className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-red-500/20 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span className="text-xs font-bold text-red-500">Reset</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <button 
-            onClick={exportToCSV}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">Export CSV</span>
-          </button>
-          
-          <button 
-            onClick={exportToPDF}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">Export PDF</span>
-          </button>
-        </div>
-
-        {/* Share / Import Class Timetable */}
-        <button
-          onClick={() => setShowTimetableShare(true)}
-          className="w-full mt-4 bg-blue-500/10 border border-blue-500/30 p-4 rounded-2xl flex items-center justify-between hover:bg-blue-500/20 active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-3 text-left">
-            <span className="text-xl">📅</span>
-            <div>
-              <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Class Timetable Share & Import</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">Generate QR code for batch or import friends' schedule</p>
-            </div>
-          </div>
-          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Open →</span>
-        </button>
-
-        {/* Archive Semester Button */}
-        <button
-          onClick={() => setShowArchiveModal(true)}
-          className="w-full mt-4 bg-purple-500/10 border border-purple-500/30 p-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-500/20 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-          </svg>
-          <span className="text-sm font-bold text-purple-500">Archive Current Semester</span>
-        </button>
-
-        {/* Archived Semesters */}
-        {archivedSemesters.length > 0 && (
-          <div className="mt-4">
-            <button
-              onClick={() => setShowArchivedList(!showArchivedList)}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex justify-between items-center"
-            >
-              <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">Archived Semesters ({archivedSemesters.length})</span>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${showArchivedList ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            {/* Instant Search Bar */}
+            <div className="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </button>
-            {showArchivedList && (
-              <div className="mt-2 space-y-2">
-                {archivedSemesters.map(sem => (
-                  <div key={sem.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-sm text-slate-900 dark:text-white">{sem.name}</p>
-                      <p className="text-[10px] text-slate-500">
-                        {sem.subjects.length} subjects • {sem.records.length} records • {sem.overallPct.toFixed(1)}% overall
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        Archived {new Date(sem.archivedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search settings (e.g. pin, theme, holiday, backup)..."
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* Group 1: Academic & Schedule */}
+          {(!searchQuery || 'academic thresholds target semester breaks holidays calendar sync subjects'.includes(searchQuery.toLowerCase())) && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
+                Academic & Schedule
+              </span>
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+                {/* Academic & Goals */}
+                {(!searchQuery || 'academic thresholds target goal semester attendance buffer'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('academic')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Academic &amp; Thresholds</p>
+                          <span className="bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {Math.round(settings.globalThreshold * 100)}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Target threshold &bull; End: {settings.semesterEndDate ? settings.semesterEndDate.split('T')[0] : 'Not set'}
+                        </p>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setModal({
-                          isOpen: true,
-                          title: "Delete Semester",
-                          message: `Are you sure you want to delete archived semester "${sem.name}"? This action cannot be undone.`,
-                          type: "confirm",
-                          confirmText: "Delete",
-                          cancelText: "Cancel",
-                          onConfirm: () => {
-                            deleteArchivedSemester(sem.id);
-                            setModal(null);
-                          },
-                          onCancel: () => setModal(null)
-                        });
-                      }}
-                      className="text-red-500 p-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+                )}
 
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Manage Subjects</h2>
-        <div className="space-y-3">
-          {subjects.map((subject) => (
-            <div key={subject.id} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <p className="font-bold text-slate-900 dark:text-white">{subject.name}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{subject.credits} Credits • {subject.schedule.length} classes/week</p>
+                {/* Holidays & Breaks */}
+                {(!searchQuery || 'holidays breaks exam vacation exclusions presets ics'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('holidays')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">College Holidays &amp; Breaks</p>
+                          <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {settings.holidays?.length || 0} Breaks
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Vacations &amp; exam exclusions
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* Sync & Calendar Export */}
+                {(!searchQuery || 'sync calendar widgets ics google apple outlook lock screen'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('sync')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Calendar Sync &amp; Widgets</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Google / Apple Calendar .ics &amp; Android Widget
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* Manage Subjects */}
+                {(!searchQuery || 'subjects courses manage credits faculty room timetable'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('subjects')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Manage Subjects</p>
+                          <span className="bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {subjects.length} Courses
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Classrooms, faculty &amp; schedule slots
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
               </div>
-              <button 
-                onClick={() => handleDeleteSubject(subject.id, subject.name)}
-                className="text-red-500 p-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
             </div>
-          ))}
+          )}
+
+          {/* Group 2: System, Privacy & Alerts */}
+          {(!searchQuery || 'system notifications push alerts digest security pin lock passcode appearance theme colors oled dark data backup restore csv pdf archive'.includes(searchQuery.toLowerCase())) && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
+                System, Privacy &amp; Alerts
+              </span>
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+                {/* Notifications */}
+                {(!searchQuery || 'notifications push alerts reminder pre-class morning digest sunday'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('notifications')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Smart Notifications</p>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${settings.notificationsEnabled ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                            {settings.notificationsEnabled ? 'Active' : 'Off'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {settings.notificationsEnabled ? `Morning digest ${settings.dailyDigestTime || '07:30'}` : 'Alerts paused'}
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* Security & PIN Lock */}
+                {(!searchQuery || 'security pin lock passcode protection privacy'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('security')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Security &amp; PIN Lock</p>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${settings.appLockEnabled ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                            {settings.appLockEnabled ? 'PIN Locked' : 'Unlocked'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {settings.appLockEnabled ? '4-digit passcode active' : 'No launch lock'}
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* Appearance & Themes */}
+                {(!searchQuery || 'appearance theme dark light oled accent color palette haptics vibration'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('appearance')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Appearance &amp; Themes</p>
+                          <span className="bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                            {settings.theme}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {settings.themeAccent || 'Blue'} accent &bull; Haptics
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* Data & Backup */}
+                {(!searchQuery || 'data backup restore csv pdf export archive reset clear json'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('data')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-600 dark:text-slate-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Data, Backup &amp; Export</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          JSON Backup, Restore, CSV, PDF &amp; Archival
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Group 3: Help, Support & About */}
+          {(!searchQuery || 'help faq questions support about privacy legal rate share feedback version'.includes(searchQuery.toLowerCase())) && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
+                Help, Support &amp; About
+              </span>
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+                {/* FAQ */}
+                {(!searchQuery || 'faq questions formulas guide attendance rules'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('faq')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Frequently Asked Questions</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Attendance math, safe bunk rules &amp; how-to guide
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+
+                {/* About & Support */}
+                {(!searchQuery || 'about support legal version rate share feedback github privacy terms'.includes(searchQuery.toLowerCase())) && (
+                  <div
+                    onClick={() => setActiveSubPage('about')}
+                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">About &amp; Legal</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Version v{APP_VERSION_NAME} &bull; Privacy &bull; GitHub &bull; Feedback
+                        </p>
+                      </div>
+                    </div>
+                    <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Unified Clean Footer */}
+          <footer className="pt-6 pb-2 text-center space-y-1.5 opacity-80">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">BunkCalc v{APP_VERSION_NAME}</span>
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              Zero Internet Needed &bull; 100% Private Offline Storage
+            </p>
+          </footer>
         </div>
-      </section>
+      )}
 
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Frequently Asked Questions (FAQ)</h2>
-        <Suspense fallback={<SkeletonLoader height="h-48" />}>
-          <FaqSection />
-        </Suspense>
-      </section>
+      {/* ── SUBPAGE 1: ACADEMIC & GOALS ── */}
+      {activeSubPage === 'academic' && (
+        <AcademicSettings
+          settings={settings}
+          setSettings={setSettings}
+          onBack={() => setActiveSubPage(null)}
+        />
+      )}
 
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Support & Social</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <button 
-            onClick={handleRate}
-            className="w-full p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-500/20 p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">Rate App</span>
-            </div>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </button>
-          
-          <button 
-            onClick={handleShare}
-            className="w-full p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-500/20 p-2 rounded-lg">
-                <ThemedIcon name="share" size={20} className="text-blue-500" />
-              </div>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">Share with Friends</span>
-            </div>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </button>
+      {/* ── SUBPAGE 2: HOLIDAYS & EXAM BREAKS ── */}
+      {activeSubPage === 'holidays' && (
+        <HolidaySettings
+          settings={settings}
+          addHoliday={addHoliday}
+          updateHoliday={updateHoliday}
+          deleteHoliday={deleteHoliday}
+          onBack={() => setActiveSubPage(null)}
+          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+        />
+      )}
 
-          <button 
-            onClick={handleFeedback}
-            className="w-full p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-green-500/20 p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                  <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">Send Feedback</span>
-            </div>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </button>
+      {/* ── SUBPAGE 3: SYNC & CALENDAR EXPORT ── */}
+      {activeSubPage === 'sync' && (
+        <SyncSettings
+          subjects={subjects}
+          settings={settings}
+          records={records}
+          onBack={() => setActiveSubPage(null)}
+          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+        />
+      )}
 
-          <a 
-            href="https://github.com/PinecoXZ"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full p-4 flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-500/20 p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Developer (PinecoXZ)</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Visit GitHub profile @PinecoXZ</p>
-              </div>
-            </div>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </a>
+      {/* ── SUBPAGE 4: NOTIFICATIONS ── */}
+      {activeSubPage === 'notifications' && (
+        <NotificationSettings
+          settings={settings}
+          setSettings={setSettings}
+          onBack={() => setActiveSubPage(null)}
+          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+        />
+      )}
+
+      {/* ── SUBPAGE 5: SECURITY & PIN LOCK ── */}
+      {activeSubPage === 'security' && (
+        <SecuritySettings
+          settings={settings}
+          setSettings={setSettings}
+          onBack={() => setActiveSubPage(null)}
+          onOpenPinModal={(mode) => setPinModalMode(mode)}
+          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+        />
+      )}
+
+      {/* ── SUBPAGE 6: APPEARANCE & THEME ── */}
+      {activeSubPage === 'appearance' && (
+        <AppearanceSettings
+          settings={settings}
+          setSettings={setSettings}
+          onBack={() => setActiveSubPage(null)}
+        />
+      )}
+
+      {/* ── SUBPAGE 7: MANAGE SUBJECTS ── */}
+      {activeSubPage === 'subjects' && (
+        <SubjectSettings
+          subjects={subjects}
+          onDeleteSubject={handleDeleteSubject}
+          onBack={() => setActiveSubPage(null)}
+        />
+      )}
+
+      {/* ── SUBPAGE 8: DATA, BACKUP & EXPORT ── */}
+      {activeSubPage === 'data' && (
+        <DataSettings
+          archivedSemesters={archivedSemesters}
+          deleteArchivedSemester={deleteArchivedSemester}
+          onBack={() => setActiveSubPage(null)}
+          onOpenTimetableShare={() => setShowTimetableShare(true)}
+          onOpenArchiveModal={() => setShowArchiveModal(true)}
+          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+        />
+      )}
+
+      {/* ── SUBPAGE 9: FAQ & GUIDE ── */}
+      {activeSubPage === 'faq' && (
+        <div className="animate-in fade-in duration-150 space-y-6">
+          <SubHeader
+            title="Frequently Asked Questions"
+            subtitle="Attendance calculations & app guide"
+            onBack={() => setActiveSubPage(null)}
+          />
+          <Suspense fallback={<SkeletonLoader height="h-64" />}>
+            <FaqSection />
+          </Suspense>
         </div>
-      </section>
+      )}
 
-      <section className="mb-8">
-        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Legal & About</h2>
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-sm">
-          <button 
-            onClick={() => setLegal({ title: 'Privacy Policy', type: 'privacy' })}
-            className="w-full p-4 border-b border-slate-200 dark:border-slate-800 text-left hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors font-bold text-slate-600 dark:text-slate-300 flex justify-between items-center"
-          >
-            <span>Privacy Policy</span>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </button>
-          <button 
-            onClick={() => setLegal({ title: 'Terms of Service', type: 'terms' })}
-            className="w-full p-4 border-b border-slate-200 dark:border-slate-800 text-left hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors font-bold text-slate-600 dark:text-slate-300 flex justify-between items-center"
-          >
-            <span>Terms of Service</span>
-            <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-          </button>
-          <div className="p-4 flex justify-between items-center">
-            <span className="font-bold text-slate-500 dark:text-slate-400">App Version</span>
-            <span className="text-slate-500 dark:text-slate-400 font-black tracking-widest uppercase text-xs">v2.1.0</span>
-          </div>
-        </div>
-      </section>
+      {/* ── SUBPAGE 10: ABOUT, LEGAL & SUPPORT ── */}
+      {activeSubPage === 'about' && (
+        <AboutSettings
+          onBack={() => setActiveSubPage(null)}
+          onRate={handleRate}
+          onShare={handleShare}
+          onFeedback={handleFeedback}
+          onOpenLegal={(leg) => setLegal(leg)}
+        />
+      )}
 
+      {/* Modals */}
       {legal && (
         <Suspense fallback={<SkeletonLoader height="h-64" />}>
           <LegalModal 
@@ -1023,54 +664,49 @@ const Settings: React.FC = () => {
         </Suspense>
       )}
 
-      {/* Unified Footer */}
-      <footer className="mt-12 pt-8 pb-4 border-t border-slate-200/50 dark:border-slate-800/50 text-center space-y-2">
-        <div className="inline-flex items-center gap-2 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 px-3 py-1 rounded-full">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-          <span className="text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">BunkCalc v2.1.0</span>
-        </div>
-        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          Made by <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">PinecoXZ</a> for KIITians
-        </p>
-        <p className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-          &copy; 2026 BunkCalc &bull; Smart Attendance & Bunk Budgeting Engine
-        </p>
-      </footer>
-
       {/* Archive Semester Modal */}
       {showArchiveModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Archive Semester</h3>
-            <p className="text-xs text-slate-500 mb-6">Save your current subjects and records as a historical snapshot, then start fresh for the new semester.</p>
-            <input
-              type="text"
-              placeholder="e.g. Semester 4, Spring 2026"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Archive Current Semester</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Save your current attendance records and subjects into your archive history, then start a fresh semester.
+            </p>
+            <input 
+              placeholder="e.g. 5th Semester (Autumn 2026)"
               value={archiveName}
               onChange={(e) => setArchiveName(e.target.value)}
-              maxLength={50}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-purple-500 text-slate-900 dark:text-white mb-4"
+              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
             />
             <div className="flex gap-3">
-              <button
-                onClick={() => { setShowArchiveModal(false); setArchiveName(''); }}
-                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-sm"
+              <button 
+                onClick={() => setShowArchiveModal(false)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-xl text-xs font-bold"
               >
                 Cancel
               </button>
-              <button
+              <button 
                 onClick={handleArchiveSemester}
-                className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-purple-500/20"
+                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20"
               >
-                Archive & Reset
+                Archive &amp; Reset
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Timetable Share & Import Modal */}
+      {showTimetableShare && (
+        <TimetableShareModal 
+          isOpen={showTimetableShare}
+          onClose={() => setShowTimetableShare(false)}
+        />
+      )}
+
+      {/* AppModal Dialog */}
       {modal && (
-        <AppModal
+        <AppModal 
           isOpen={modal.isOpen}
           title={modal.title}
           message={modal.message}
@@ -1082,11 +718,31 @@ const Settings: React.FC = () => {
         />
       )}
 
-      {/* Timetable Share & Import Modal */}
-      <TimetableShareModal
-        isOpen={showTimetableShare}
-        onClose={() => setShowTimetableShare(false)}
-      />
+      {/* Visual PIN Setup / Change Modal */}
+      {pinModalMode && (
+        <PinSetupModal
+          isOpen={true}
+          initialMode={pinModalMode}
+          currentPin={settings.appLockPin}
+          onClose={() => setPinModalMode(null)}
+          onSuccess={(pin) => {
+            setSettings({
+              ...settings,
+              appLockEnabled: true,
+              appLockPin: pin,
+            });
+            setPinModalMode(null);
+            setModal({
+              isOpen: true,
+              title: pinModalMode === 'change' ? "PIN Changed" : "PIN Configured",
+              message: "Your 4-digit passcode protection is active.",
+              type: "success",
+              confirmText: "Great!",
+              onConfirm: () => setModal(null)
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

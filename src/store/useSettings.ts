@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { AppSettings, ArchivedSemester, Holiday } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
+import { syncNotificationsAndWidgets } from './syncHelpers';
+import { useSubjects } from './useSubjects';
+import { useAttendance } from './useAttendance';
 
 interface SettingsState {
   settings: AppSettings;
@@ -23,6 +26,8 @@ const defaultSettings: AppSettings = {
   preClassReminder: true,
   postClassReminder: true,
   sundaySummaryNotification: true,
+  dailyScheduleDigest: true,
+  dailyDigestTime: '07:30',
   reminderMinutesBefore: 10,
   holidayMode: false,
   hapticsEnabled: true,
@@ -36,14 +41,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
   archivedSemesters: [],
   setSettings: async (settings) => {
     set({ settings });
-    await saveToStorage('app_settings', settings);
+    try {
+      await saveToStorage('app_settings', settings);
+    } catch (err) {
+      console.error('Failed to persist app_settings:', err);
+    }
     applyTheme(settings.theme, settings.themeAccent);
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useSubjects } = await import('./useSubjects');
-      const { useAttendance } = await import('./useAttendance');
-      await scheduleDailyClassReminders(useSubjects.getState().subjects, settings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(useSubjects.getState().subjects, settings, useAttendance.getState().records);
     } catch (err) {
       console.warn('Failed to sync reminders on settings change:', err);
     }
@@ -56,13 +62,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
       holidays: [...currentHolidays, holiday],
     };
     set({ settings: updatedSettings });
-    await saveToStorage('app_settings', updatedSettings);
+    try {
+      await saveToStorage('app_settings', updatedSettings);
+    } catch (err) {
+      console.error('Failed to persist app_settings:', err);
+    }
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useSubjects } = await import('./useSubjects');
-      const { useAttendance } = await import('./useAttendance');
-      await scheduleDailyClassReminders(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
     } catch (err) {
       console.warn('Failed to sync reminders on holiday add:', err);
     }
@@ -75,13 +82,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
       holidays: currentHolidays.map((h) => (h.id === holiday.id ? holiday : h)),
     };
     set({ settings: updatedSettings });
-    await saveToStorage('app_settings', updatedSettings);
+    try {
+      await saveToStorage('app_settings', updatedSettings);
+    } catch (err) {
+      console.error('Failed to persist app_settings:', err);
+    }
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useSubjects } = await import('./useSubjects');
-      const { useAttendance } = await import('./useAttendance');
-      await scheduleDailyClassReminders(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
     } catch (err) {
       console.warn('Failed to sync reminders on holiday update:', err);
     }
@@ -94,13 +102,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
       holidays: currentHolidays.filter((h) => h.id !== id),
     };
     set({ settings: updatedSettings });
-    await saveToStorage('app_settings', updatedSettings);
+    try {
+      await saveToStorage('app_settings', updatedSettings);
+    } catch (err) {
+      console.error('Failed to persist app_settings:', err);
+    }
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useSubjects } = await import('./useSubjects');
-      const { useAttendance } = await import('./useAttendance');
-      await scheduleDailyClassReminders(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
     } catch (err) {
       console.warn('Failed to sync reminders on holiday delete:', err);
     }
@@ -123,18 +132,49 @@ export const useSettings = create<SettingsState>((set, get) => ({
     const current = get().archivedSemesters;
     const updated = [...current, semester];
     set({ archivedSemesters: updated });
-    await saveToStorage('archived_semesters', updated);
+    try {
+      await saveToStorage('archived_semesters', updated);
+    } catch (err) {
+      console.error('Failed to persist archived_semesters:', err);
+    }
   },
   deleteArchivedSemester: async (id) => {
     const current = get().archivedSemesters;
     const updated = current.filter(s => s.id !== id);
     set({ archivedSemesters: updated });
-    await saveToStorage('archived_semesters', updated);
+    try {
+      await saveToStorage('archived_semesters', updated);
+    } catch (err) {
+      console.error('Failed to persist archived_semesters:', err);
+    }
   },
 }));
 
+let systemThemeMediaListener: ((e: MediaQueryListEvent) => void) | null = null;
+
 function applyTheme(theme: 'light' | 'dark' | 'oled' | 'system', accent: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' = 'blue') {
   const root = window.document.documentElement;
+  
+  // Clean up previous system theme listener if any
+  if (systemThemeMediaListener) {
+    window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', systemThemeMediaListener);
+    systemThemeMediaListener = null;
+  }
+
+  if (theme === 'system') {
+    const listener = (e: MediaQueryListEvent) => {
+      const rootEl = window.document.documentElement;
+      if (e.matches) {
+        rootEl.classList.add('dark');
+      } else {
+        rootEl.classList.remove('dark');
+      }
+      rootEl.classList.remove('oled');
+    };
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', listener);
+    systemThemeMediaListener = listener;
+  }
+
   const isDark = theme === 'dark' || theme === 'oled' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const isOled = theme === 'oled';
   
@@ -153,3 +193,4 @@ function applyTheme(theme: 'light' | 'dark' | 'oled' | 'system', accent: 'blue' 
   root.classList.remove('accent-blue', 'accent-purple', 'accent-emerald', 'accent-amber', 'accent-rose');
   root.classList.add(`accent-${accent || 'blue'}`);
 }
+

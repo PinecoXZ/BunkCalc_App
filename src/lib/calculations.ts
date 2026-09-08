@@ -26,6 +26,7 @@ export const calculateSubjectStats = (
 ): SubjectStats => {
   const subjectRecords = records.filter((r) => r.subjectId === subject.id);
   const multiplier = subject.isLab ? 2 : 1;
+  const threshold = subject.threshold ?? 0.75;
 
   const attendedSoFar = subject.attendedSoFar || 0;
   const missedSoFar = subject.missedSoFar || 0;
@@ -50,18 +51,22 @@ export const calculateSubjectStats = (
     totalClasses + remainingClasses
   );
 
-  const requiredSessions = Math.ceil(totalSessions * subject.threshold);
-  const bunkBudget = totalSessions - requiredSessions - totalMissed;
+  const requiredSessions = Math.ceil(totalSessions * threshold);
+  let bunkBudget = totalSessions - requiredSessions - totalMissed;
+
+  if (!semesterEndDate && remainingClasses === 0) {
+    bunkBudget = 0;
+  }
 
   // Current attendance %
   const attendancePct = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
 
   // Classes needed to recover if below threshold or negative budget
   let classesNeededToRecover = 0;
-  if (bunkBudget < 0 || attendancePct < subject.threshold * 100) {
-    const denominator = 1 - subject.threshold;
+  if (bunkBudget < 0 || attendancePct < threshold * 100) {
+    const denominator = 1 - threshold;
     if (denominator > 0) {
-      const numerator = subject.threshold * totalMissed - totalAttended * (1 - subject.threshold);
+      const numerator = threshold * totalMissed - totalAttended * (1 - threshold);
       classesNeededToRecover = Math.max(0, Math.ceil(numerator / denominator));
     } else {
       classesNeededToRecover = totalMissed > 0 ? 999 : 0;
@@ -96,23 +101,73 @@ export const parseLocalDate = (dateStr: string): Date => {
   return new Date(year, month - 1, day);
 };
 
-export const calculateProjections = (
-  subject: Subject,
-  records: AttendanceRecord[],
-  semesterEndDate: string,
-  holidays?: Holiday[]
-): SubjectStats => {
-  return calculateSubjectStats(subject, records, semesterEndDate, holidays);
-};
 
-export const getStatusColor = (percentage: number) => {
-  if (percentage >= 85) return 'text-green-500';
-  if (percentage >= 75) return 'text-amber-500';
+export const getStatusColor = (percentage: number, threshold: number = 0.75) => {
+  const thresholdPct = threshold * 100;
+  if (percentage >= thresholdPct + 10) return 'text-green-500';
+  if (percentage >= thresholdPct) return 'text-amber-500';
   return 'text-red-500';
 };
 
-export const getStatusBgColor = (percentage: number) => {
-  if (percentage >= 85) return 'bg-green-500';
-  if (percentage >= 75) return 'bg-amber-500';
+export const getStatusBgColor = (percentage: number, threshold: number = 0.75) => {
+  const thresholdPct = threshold * 100;
+  if (percentage >= thresholdPct + 10) return 'bg-green-500';
+  if (percentage >= thresholdPct) return 'bg-amber-500';
   return 'bg-red-500';
 };
+
+export interface WeekdayStat {
+  dayIndex: number;
+  dayName: string;
+  shortName: string;
+  attended: number;
+  missed: number;
+  cancelled: number;
+  total: number;
+  percentage: number;
+}
+
+const WEEKDAY_NAMES = [
+  { short: 'Sun', full: 'Sunday' },
+  { short: 'Mon', full: 'Monday' },
+  { short: 'Tue', full: 'Tuesday' },
+  { short: 'Wed', full: 'Wednesday' },
+  { short: 'Thu', full: 'Thursday' },
+  { short: 'Fri', full: 'Friday' },
+  { short: 'Sat', full: 'Saturday' },
+];
+
+export const calculateWeekdayStats = (records: AttendanceRecord[]): WeekdayStat[] => {
+  const map = new Map<number, { attended: number; missed: number; cancelled: number }>();
+  for (let i = 0; i < 7; i++) {
+    map.set(i, { attended: 0, missed: 0, cancelled: 0 });
+  }
+
+  records.forEach((r) => {
+    const [y, m, d] = r.date.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const day = date.getDay();
+    const current = map.get(day)!;
+    if (r.status === 'present') current.attended++;
+    else if (r.status === 'absent') current.missed++;
+    else if (r.status === 'cancelled') current.cancelled++;
+  });
+
+  return WEEKDAY_NAMES.map((name, idx) => {
+    const counts = map.get(idx)!;
+    const total = counts.attended + counts.missed;
+    const percentage = total === 0 ? 100 : (counts.attended / total) * 100;
+    return {
+      dayIndex: idx,
+      dayName: name.full,
+      shortName: name.short,
+      attended: counts.attended,
+      missed: counts.missed,
+      cancelled: counts.cancelled,
+      total,
+      percentage: Number(percentage.toFixed(1)),
+    };
+  });
+};
+
+

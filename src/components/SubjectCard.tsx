@@ -38,7 +38,7 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
     if (settings.hapticsEnabled) {
       try {
         await Haptics.impact({ style });
-      } catch (e) {
+      } catch {
         // Safe fallback for web
       }
     }
@@ -86,11 +86,23 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
               </span>
             )}
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{subject.credits} Credits • {stats.remainingClasses} remaining</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <p className="text-slate-500 dark:text-slate-400 text-xs">{subject.credits} Credits • {stats.remainingClasses} remaining</p>
+            {subject.room && (
+              <span className="text-slate-500 text-[10px] font-bold bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                {subject.room}
+              </span>
+            )}
+            {subject.faculty && (
+              <span className="text-slate-400 text-[10px] font-medium truncate max-w-[100px]">
+                {subject.faculty}
+              </span>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <div className={`px-3 py-1 rounded-full text-[10px] font-black tracking-tighter text-white ${getStatusBgColor(stats.attendancePct)}`}>
+          <div className={`px-3 py-1 rounded-full text-[10px] font-black tracking-tighter text-white ${getStatusBgColor(stats.attendancePct, subject.threshold)}`}>
             {stats.attendancePct.toFixed(1)}%
           </div>
           

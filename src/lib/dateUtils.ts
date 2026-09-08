@@ -1,4 +1,6 @@
 import type { ScheduleSlot, AttendanceRecord, Holiday } from './types';
+export const toISODateStr = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /**
  * Count remaining class sessions from today (or tomorrow if today is marked) to semesterEndDate,
@@ -33,7 +35,7 @@ export const countRemainingSessions = (
 
   // If today's attendance for this subject has already been marked, skip today's slot in remaining count
   if (subjectId) {
-    const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD local format
+    const todayStr = toISODateStr(now);
     const isTodayMarked = records.some(
       (r) => r.subjectId === subjectId && r.date === todayStr
     );
@@ -45,7 +47,7 @@ export const countRemainingSessions = (
   const multiplier = isLab ? 2 : 1;
   let sessionCount = 0;
   while (current <= endDate) {
-    const currentStr = current.toLocaleDateString('en-CA');
+    const currentStr = toISODateStr(current);
     
     // Check if current date is inside any configured college holiday / exam range
     const isHoliday = holidays.some((h) => currentStr >= h.startDate && currentStr <= h.endDate);

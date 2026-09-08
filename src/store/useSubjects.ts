@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import type { Subject } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
+import { cancelSubjectNotifications } from '../lib/notifications';
+import { syncNotificationsAndWidgets } from './syncHelpers';
+import { useAttendance } from './useAttendance';
+import { useSettings } from './useSettings';
 
 interface SubjectsState {
   subjects: Subject[];
@@ -10,57 +14,65 @@ interface SubjectsState {
   loadSubjects: () => Promise<void>;
 }
 
-export const useSubjects = create<SubjectsState>((set, get) => ({
+export const useSubjects = create<SubjectsState>((set) => ({
   subjects: [],
   addSubject: async (subject) => {
-    const newSubjects = [...get().subjects, subject];
-    set({ subjects: newSubjects });
-    await saveToStorage('subjects', newSubjects);
+    let newSubjects: Subject[] = [];
+    set((state) => {
+      newSubjects = [...state.subjects, subject];
+      return { subjects: newSubjects };
+    });
+    try {
+      await saveToStorage('subjects', newSubjects);
+    } catch (err) {
+      console.error('Failed to persist subjects:', err);
+    }
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useAttendance } = await import('./useAttendance');
-      const { useSettings } = await import('./useSettings');
-      await scheduleDailyClassReminders(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
     } catch (err) {
       console.error('Failed to reschedule notifications after adding subject:', err);
     }
   },
   updateSubject: async (subject) => {
-    const newSubjects = get().subjects.map((s) => (s.id === subject.id ? subject : s));
-    set({ subjects: newSubjects });
-    await saveToStorage('subjects', newSubjects);
+    let newSubjects: Subject[] = [];
+    set((state) => {
+      newSubjects = state.subjects.map((s) => (s.id === subject.id ? subject : s));
+      return { subjects: newSubjects };
+    });
+    try {
+      await saveToStorage('subjects', newSubjects);
+    } catch (err) {
+      console.error('Failed to persist subjects:', err);
+    }
 
     try {
-      const { scheduleDailyClassReminders } = await import('../lib/notifications');
-      const { useAttendance } = await import('./useAttendance');
-      const { useSettings } = await import('./useSettings');
-      await scheduleDailyClassReminders(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
     } catch (err) {
       console.error('Failed to reschedule notifications after updating subject:', err);
     }
   },
   deleteSubject: async (id) => {
-    const newSubjects = get().subjects.filter((s) => s.id !== id);
-    set({ subjects: newSubjects });
-    await saveToStorage('subjects', newSubjects);
+    let newSubjects: Subject[] = [];
+    set((state) => {
+      newSubjects = state.subjects.filter((s) => s.id !== id);
+      return { subjects: newSubjects };
+    });
+    try {
+      await saveToStorage('subjects', newSubjects);
+    } catch (err) {
+      console.error('Failed to persist subjects:', err);
+    }
     
     try {
-      const { cancelSubjectNotifications, scheduleDailyClassReminders } = await import('../lib/notifications');
       await cancelSubjectNotifications(id);
-      const { useAttendance } = await import('./useAttendance');
-      const { useSettings } = await import('./useSettings');
-      await scheduleDailyClassReminders(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
+      await syncNotificationsAndWidgets(newSubjects, useSettings.getState().settings, useAttendance.getState().records);
     } catch (err) {
       console.error('Failed to cancel notifications:', err);
     }
 
     try {
-      const { useAttendance } = await import('./useAttendance');
-      const attendanceRecords = useAttendance.getState().records;
-      const remainingRecords = attendanceRecords.filter(r => r.subjectId !== id);
-      useAttendance.setState({ records: remainingRecords });
-      await saveToStorage('attendance_records', remainingRecords);
+      await useAttendance.getState().deleteRecordsForSubject(id);
     } catch (err) {
       console.error('Failed to cleanup attendance records:', err);
     }

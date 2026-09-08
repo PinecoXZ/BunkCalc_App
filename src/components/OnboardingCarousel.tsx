@@ -5,7 +5,7 @@ interface Props {
 }
 
 interface Slide {
-  emoji: string;
+  iconType: 'book' | 'target' | 'bell';
   title: string;
   subtitle: string;
   badge?: string;
@@ -14,24 +14,24 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    emoji: '📚',
+    iconType: 'book',
     title: 'Welcome to BunkCalc',
     subtitle:
       'Your offline attendance tracker. Zero internet needed. 100% private.',
     badge: 'Made for Indian Students',
   },
   {
-    emoji: '🎯',
+    iconType: 'target',
     title: 'Smart Bunk Budget',
     subtitle:
       'Know exactly how many classes you can safely skip while staying above your attendance threshold.',
   },
   {
-    emoji: '🔔',
+    iconType: 'bell',
     title: 'Never Get Debarred',
     subtitle:
       'Get timely reminders before class starts and instant alerts when your attendance drops dangerously low.',
-    cta: 'Get Started →',
+    cta: 'Get Started',
   },
 ];
 
@@ -149,12 +149,26 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
 
               {/* Middle Content */}
               <div className="flex-1 flex flex-col items-center justify-center max-w-xs">
-                {/* Decorative ring behind emoji */}
-                <div className="relative mb-6">
+                {/* Decorative vector icon */}
+                <div className="relative mb-8">
                   <div className="absolute inset-0 -m-6 rounded-full bg-blue-500/10 blur-3xl animate-pulse" />
-                  <span className="relative text-7xl leading-none drop-shadow-xl select-none">
-                    {slide.emoji}
-                  </span>
+                  <div className="relative w-24 h-24 rounded-3xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shadow-2xl shadow-blue-500/20">
+                    {slide.iconType === 'book' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    )}
+                    {slide.iconType === 'target' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    )}
+                    {slide.iconType === 'bell' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
 
                 {/* Badge */}

@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSubjects } from '../store/useSubjects';
-import type { Subject } from '../lib/types';
+import { useAttendance } from '../store/useAttendance';
+import { useSettings } from '../store/useSettings';
+import { calculateSubjectStats } from '../lib/calculations';
+import type { Subject, ScheduleSlot } from '../lib/types';
 
 const BLOCK_COLORS = [
   'bg-blue-600',
@@ -27,13 +30,21 @@ const BASE_DAYS: DayColumn[] = [
 
 interface ClassBlock {
   subject: Subject;
-  slot: string;
+  slot: ScheduleSlot;
   colorClass: string;
 }
 
-const TimetableGrid: React.FC = () => {
+export const TimetableGrid: React.FC = () => {
   const subjects = useSubjects((s) => s.subjects);
+  const { records } = useAttendance();
+  const { settings } = useSettings();
   const today = new Date().getDay();
+
+  const [inspectedClass, setInspectedClass] = useState<{
+    subject: Subject;
+    slot: ScheduleSlot;
+    dayLabel: string;
+  } | null>(null);
 
   // Build a color map keyed by subject index for consistent coloring
   const colorMap = useMemo(() => {
@@ -62,12 +73,12 @@ const TimetableGrid: React.FC = () => {
     days.forEach((d) => map.set(d.dayIndex, []));
 
     subjects.forEach((subj) => {
-      subj.schedule.forEach((sc) => {
-        const list = map.get(sc.day);
+      (subj.schedule || []).forEach((sc) => {
+        const list = map.get(Number(sc.day));
         if (list) {
           list.push({
             subject: subj,
-            slot: sc.slot,
+            slot: sc,
             colorClass: colorMap.get(subj.id) ?? BLOCK_COLORS[0],
           });
         }
@@ -76,7 +87,7 @@ const TimetableGrid: React.FC = () => {
 
     // Sort each day's classes by slot string (natural time order)
     map.forEach((blocks) => {
-      blocks.sort((a, b) => a.slot.localeCompare(b.slot));
+      blocks.sort((a, b) => a.slot.slot.localeCompare(b.slot.slot));
     });
 
     return map;
@@ -84,6 +95,15 @@ const TimetableGrid: React.FC = () => {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Weekly Master Timetable
+          </h3>
+          <p className="text-[10px] text-slate-400">Tap any class block to inspect stats</p>
+        </div>
+      </div>
+
       <div
         className="overflow-x-auto"
         style={{
@@ -91,14 +111,14 @@ const TimetableGrid: React.FC = () => {
           msOverflowStyle: 'none',
         }}
       >
-        {/* Hide scrollbar for Webkit browsers */}
         <style>{`
           .timetable-scroll::-webkit-scrollbar {
             display: none;
           }
         `}</style>
 
-        <div className="timetable-scroll flex gap-3 min-w-max scroll-smooth overflow-x-auto"
+        <div
+          className="timetable-scroll flex gap-3 min-w-max scroll-smooth overflow-x-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {days.map((day) => {
@@ -115,18 +135,16 @@ const TimetableGrid: React.FC = () => {
                 }`}
               >
                 {/* Column header */}
-                <div className="sticky top-0 z-10 px-3 pt-3 pb-2">
+                <div className="sticky top-0 z-10 px-3 pt-3 pb-2 flex items-center justify-between">
                   <span
                     className={`text-[10px] font-black uppercase tracking-widest ${
-                      isToday
-                        ? 'text-blue-500'
-                        : 'text-slate-500'
+                      isToday ? 'text-blue-500' : 'text-slate-500'
                     }`}
                   >
                     {day.label}
                   </span>
                   {isToday && (
-                    <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                   )}
                 </div>
 
@@ -139,25 +157,44 @@ const TimetableGrid: React.FC = () => {
                       </span>
                     </div>
                   ) : (
-                    blocks.map((block, blockIdx) => (
-                      <div
-                        key={`${block.subject.id}-${block.slot}-${blockIdx}`}
-                        className={`${block.colorClass} rounded-xl p-3 mb-0 min-w-[120px] text-white shadow-md
-                          hover:scale-[1.03] hover:shadow-lg transition-all duration-200 cursor-default`}
-                      >
-                        <p className="font-bold text-xs truncate leading-tight">
-                          {block.subject.name}
-                        </p>
-                        <p className="text-[10px] text-white/70 mt-1 leading-tight">
-                          {block.slot}
-                        </p>
-                        {block.subject.isLab && (
-                          <span className="inline-block mt-1.5 text-[9px] font-bold uppercase tracking-wider bg-white/20 backdrop-blur-sm rounded-md px-1.5 py-0.5">
-                            Lab (2 hrs)
-                          </span>
-                        )}
-                      </div>
-                    ))
+                    blocks.map((block, blockIdx) => {
+                      const room = block.slot.room || block.subject.room;
+                      const faculty = block.slot.faculty || block.subject.faculty;
+
+                      return (
+                        <button
+                          key={`${block.subject.id}-${block.slot.slot}-${blockIdx}`}
+                          type="button"
+                          onClick={() => setInspectedClass({ subject: block.subject, slot: block.slot, dayLabel: day.label })}
+                          className={`${block.colorClass} text-left rounded-xl p-3 mb-0 min-w-[130px] text-white shadow-md
+                            hover:scale-[1.02] active:scale-95 transition-all duration-200 cursor-pointer`}
+                        >
+                          <p className="font-bold text-xs truncate leading-tight">
+                            {block.subject.name}
+                          </p>
+                          <p className="text-[10px] text-white/80 mt-1 leading-tight font-mono font-medium">
+                            {block.slot.slot}
+                          </p>
+                          {room && (
+                            <p className="text-[9px] text-white/90 truncate mt-0.5 font-bold">
+                              {room}
+                            </p>
+                          )}
+                          <div className="flex gap-1 items-center mt-1.5 flex-wrap">
+                            {block.subject.isLab && (
+                              <span className="text-[8px] font-black uppercase tracking-wider bg-white/25 backdrop-blur-sm rounded px-1.5 py-0.5">
+                                Lab (2 hrs)
+                              </span>
+                            )}
+                            {faculty && (
+                              <span className="text-[8px] font-medium bg-black/20 rounded px-1 py-0.5 truncate max-w-[90px]">
+                                {faculty}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -165,6 +202,109 @@ const TimetableGrid: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Inspect Class Modal */}
+      {inspectedClass && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Inspect Class Details"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setInspectedClass(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-500 block">
+                  {inspectedClass.dayLabel} • {inspectedClass.slot.slot}
+                </span>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                  {inspectedClass.subject.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setInspectedClass(null)}
+                aria-label="Close"
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Room & Faculty Details */}
+            {(inspectedClass.slot.room || inspectedClass.subject.room || inspectedClass.slot.faculty || inspectedClass.subject.faculty) && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs">
+                {(inspectedClass.slot.room || inspectedClass.subject.room) && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Room / Hall:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {inspectedClass.slot.room || inspectedClass.subject.room}
+                    </span>
+                  </div>
+                )}
+                {(inspectedClass.slot.faculty || inspectedClass.subject.faculty) && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Faculty:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {inspectedClass.slot.faculty || inspectedClass.subject.faculty}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Live Stats */}
+            {(() => {
+              const stats = calculateSubjectStats(
+                inspectedClass.subject,
+                records,
+                settings.semesterEndDate,
+                settings.holidays
+              );
+              const target = (inspectedClass.subject.threshold || settings.globalThreshold) * 100;
+              const isSafe = stats.attendancePct >= target;
+
+              return (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Attendance</span>
+                      <span className={`text-base font-black ${isSafe ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {stats.attendancePct.toFixed(1)}%
+                      </span>
+                      <span className="text-[9px] text-slate-400 block">
+                        Target: {Math.round(target)}%
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Bunk Buffer</span>
+                      <span className={`text-base font-black ${stats.bunkBudget >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                        {stats.bunkBudget >= 0 ? `${stats.bunkBudget} Safe` : `Need ${stats.classesNeededToRecover}`}
+                      </span>
+                      <span className="text-[9px] text-slate-400 block">
+                        {stats.attendedCount}/{stats.totalClasses} sessions
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={() => setInspectedClass(null)}
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

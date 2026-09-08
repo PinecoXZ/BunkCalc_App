@@ -47,8 +47,10 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
     return sortedRecords.slice(0, displayLimit);
   }, [sortedRecords, displayLimit]);
 
+  const subjectNameMap = useMemo(() => new Map(subjects.map(s => [s.id, s.name])), [subjects]);
+
   const getSubjectName = (id: string) => {
-    return subjects.find(s => s.id === id)?.name || 'Deleted Subject';
+    return subjectNameMap.get(id) || 'Deleted Subject';
   };
 
   return (

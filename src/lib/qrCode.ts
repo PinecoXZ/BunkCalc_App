@@ -15,16 +15,4 @@ export const generateQRCodeSVG = async (text: string): Promise<string> => {
   });
 };
 
-/**
- * Generates a clean data URL (PNG format)
- */
-export const generateQRCodeDataURL = async (text: string): Promise<string> => {
-  return QRCode.toDataURL(text, {
-    margin: 1,
-    errorCorrectionLevel: 'M',
-    color: {
-      dark: '#0f172a',
-      light: '#ffffff',
-    },
-  });
-};
+

@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import type { Subject } from '../lib/types';
-import { calculateProjections, getStatusBgColor, parseLocalDate } from '../lib/calculations';
+import { calculateSubjectStats, getStatusBgColor, parseLocalDate } from '../lib/calculations';
 import { useAttendance } from '../store/useAttendance';
 import { useSubjects } from '../store/useSubjects';
 import { useSettings } from '../store/useSettings';
 import { AppModal } from '../components/AppModal';
 import SubjectModal from '../components/SubjectModal';
+import { registerBackHandler } from '../lib/backHandler';
 
 interface Props {
   subject: Subject;
@@ -29,12 +30,33 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
     cancelText?: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // Hardware Back Button listener
+  React.useEffect(() => {
+    if (!showEditModal && !modal) return;
+
+    const unregister = registerBackHandler(() => {
+      if (modal) {
+        setModal(null);
+        return true;
+      }
+      if (showEditModal) {
+        setShowEditModal(false);
+        return true;
+      }
+      return false;
+    });
+
+    return unregister;
+  }, [showEditModal, modal]);
   
-  const subjectRecords = records
-    .filter((r) => r.subjectId === currentSubject.id)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const subjectRecords = useMemo(() => {
+    return records
+      .filter((r) => r.subjectId === currentSubject.id)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [records, currentSubject.id]);
   
-  const projections = useMemo(() => calculateProjections(currentSubject, records, settings.semesterEndDate, settings.holidays), [currentSubject, records, settings.semesterEndDate, settings.holidays]);
+  const projections = useMemo(() => calculateSubjectStats(currentSubject, records, settings.semesterEndDate, settings.holidays), [currentSubject, records, settings.semesterEndDate, settings.holidays]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-24">
@@ -65,7 +87,7 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1">Attendance</p>
-          <p className={`text-3xl font-black ${getStatusBgColor(projections.attendancePct).replace('bg-', 'text-')}`}>
+          <p className={`text-3xl font-black ${getStatusBgColor(projections.attendancePct, currentSubject.threshold).replace('bg-', 'text-')}`}>
             {projections.attendancePct.toFixed(1)}%
           </p>
         </div>

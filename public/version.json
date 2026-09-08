@@ -1,6 +1,6 @@
 {
-  "versionCode": 6,
-  "versionName": "2.1.0",
+  "versionCode": 8,
+  "versionName": "2.2.1",
   "apkUrl": "https://bunk-calc-web.vercel.app/bunkcalc.apk",
-  "changelog": "v2.1.0 Major Release: Added Class Timetable Cloud & QR Sharing, Mid-Semester Past Attendance Input, Interactive Holiday Manager, Weekly Bunk Strategy & Simulator, and Smart 10-minute delayed Reminders."
+  "changelog": "v2.2.1: Holiday & exam break class display fix on Today tab, enhanced calendar view with holiday indicators, Android widget holiday sync, and comprehensive performance optimizations."
 }

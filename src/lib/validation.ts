@@ -1,3 +1,5 @@
+﻿import type { Subject, AttendanceRecord, AppSettings, ArchivedSemester, Holiday } from './types';
+
 export function sanitizeName(name: string): string {
   if (typeof name !== 'string') return '';
   let sanitized = name.trim();
@@ -9,9 +11,7 @@ export function sanitizeName(name: string): string {
   sanitized = sanitized.replace(/<[^>]*>/g, '');
 
   // Strip control characters (C0 and C1 control codes) and non-printable characters
-  // C0 control characters: \x00-\x1F, \x7F
-  // C1 control characters: \x80-\x9F
-  // Unicode format characters like zero-width spaces, RTL/LTR overrides, etc.
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF\u202E\u202F]/g, '');
 
   // Collapse inner multiple spaces/whitespace to one space
@@ -47,7 +47,7 @@ export function validateArchiveName(name: string): { valid: boolean; error?: str
   return { valid: true };
 }
 
-function hasPrototypePollution(obj: any): boolean {
+function hasPrototypePollution(obj: unknown): boolean {
   if (obj === null || typeof obj !== 'object') {
     return false;
   }
@@ -59,12 +59,13 @@ function hasPrototypePollution(obj: any): boolean {
       }
     }
   } else {
-    const keys = Object.keys(obj);
+    const rec = obj as Record<string, unknown>;
+    const keys = Object.keys(rec);
     for (const key of keys) {
-      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      if (key === '__proto__') {
         return true;
       }
-      if (hasPrototypePollution(obj[key])) {
+      if (hasPrototypePollution(rec[key])) {
         return true;
       }
     }
@@ -72,119 +73,156 @@ function hasPrototypePollution(obj: any): boolean {
   return false;
 }
 
-function isString(val: any): val is string {
+function isString(val: unknown): val is string {
   return typeof val === 'string';
 }
 
-function isNumber(val: any): val is number {
+function isNumber(val: unknown): val is number {
   return typeof val === 'number' && !isNaN(val);
 }
 
-function isBoolean(val: any): val is boolean {
+function isBoolean(val: unknown): val is boolean {
   return typeof val === 'boolean';
 }
 
 const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/; // HH:MM
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
 
-function validateScheduleSlot(slot: any): boolean {
+function validateScheduleSlot(slot: unknown): boolean {
   if (!slot || typeof slot !== 'object') return false;
-  if (!isNumber(slot.day) || slot.day < 0 || slot.day > 6) return false;
-  if (!isString(slot.slot) || !TIME_REGEX.test(slot.slot)) return false;
+  const s = slot as Record<string, unknown>;
+  if (!isNumber(s.day) || s.day < 0 || s.day > 6) return false;
+  if (!isString(s.slot) || !TIME_REGEX.test(s.slot)) return false;
   return true;
 }
 
-function validateSubject(sub: any): { valid: boolean; data?: any } {
+function validateSubject(sub: unknown): { valid: boolean; data?: Subject } {
   if (!sub || typeof sub !== 'object') return { valid: false };
-  if (!isString(sub.id) || !sub.id.trim()) return { valid: false };
-  if (!isString(sub.name)) return { valid: false };
+  const s = sub as Record<string, unknown>;
+  if (!isString(s.id) || !s.id.trim()) return { valid: false };
+  if (!isString(s.name)) return { valid: false };
   
-  const sanitizedName = sanitizeName(sub.name);
+  const sanitizedName = sanitizeName(s.name);
   if (!sanitizedName || sanitizedName.length > 40) return { valid: false };
   
-  if (!isNumber(sub.credits) || sub.credits < 1 || sub.credits > 5) return { valid: false };
-  if (!isNumber(sub.threshold) || sub.threshold < 0 || sub.threshold > 1) return { valid: false };
+  if (!isNumber(s.credits) || s.credits < 1 || s.credits > 5) return { valid: false };
+  if (!isNumber(s.threshold) || s.threshold < 0 || s.threshold > 1) return { valid: false };
   
-  if (!Array.isArray(sub.schedule)) return { valid: false };
-  for (const slot of sub.schedule) {
+  if (!Array.isArray(s.schedule)) return { valid: false };
+  for (const slot of s.schedule) {
     if (!validateScheduleSlot(slot)) return { valid: false };
   }
   
-  const isLab = typeof sub.isLab === 'boolean' ? sub.isLab : sub.labMultiplier === 2;
+  const isLab = typeof s.isLab === 'boolean' ? s.isLab : s.labMultiplier === 2;
   
-  const attendedSoFar = isNumber(sub.attendedSoFar) && sub.attendedSoFar >= 0 ? Math.floor(sub.attendedSoFar) : 0;
-  const missedSoFar = isNumber(sub.missedSoFar) && sub.missedSoFar >= 0 ? Math.floor(sub.missedSoFar) : 0;
+  const attendedSoFar = isNumber(s.attendedSoFar) && s.attendedSoFar >= 0 ? Math.floor(s.attendedSoFar) : 0;
+  const missedSoFar = isNumber(s.missedSoFar) && s.missedSoFar >= 0 ? Math.floor(s.missedSoFar) : 0;
+
+  const validSchedule = (s.schedule as Array<Record<string, unknown>>).map((slot) => ({
+    day: Number(slot.day),
+    slot: String(slot.slot),
+    room: typeof slot.room === 'string' ? sanitizeName(slot.room) : undefined,
+    faculty: typeof slot.faculty === 'string' ? sanitizeName(slot.faculty) : undefined,
+  }));
 
   return {
     valid: true,
     data: {
-      id: sub.id.trim(),
+      id: s.id.trim(),
       name: sanitizedName,
-      credits: sub.credits,
-      threshold: sub.threshold,
-      schedule: sub.schedule.map((s: any) => ({ day: s.day, slot: s.slot })),
+      credits: s.credits,
+      threshold: s.threshold,
+      schedule: validSchedule,
       isLab,
       attendedSoFar,
-      missedSoFar
+      missedSoFar,
+      color: typeof s.color === 'string' ? s.color : undefined,
+      code: typeof s.code === 'string' ? sanitizeName(s.code) : undefined,
+      room: typeof s.room === 'string' ? sanitizeName(s.room) : undefined,
+      faculty: typeof s.faculty === 'string' ? sanitizeName(s.faculty) : undefined,
     }
   };
 }
 
-function validateAttendanceRecord(rec: any): { valid: boolean; data?: any } {
+function validateAttendanceRecord(rec: unknown): { valid: boolean; data?: AttendanceRecord } {
   if (!rec || typeof rec !== 'object') return { valid: false };
-  if (!isString(rec.id) || !rec.id.trim()) return { valid: false };
-  if (!isString(rec.subjectId) || !rec.subjectId.trim()) return { valid: false };
-  if (!isString(rec.date) || !DATE_REGEX.test(rec.date)) return { valid: false };
-  if (rec.status !== 'present' && rec.status !== 'absent' && rec.status !== 'cancelled') return { valid: false };
+  const r = rec as Record<string, unknown>;
+  if (!isString(r.id) || !r.id.trim()) return { valid: false };
+  if (!isString(r.subjectId) || !r.subjectId.trim()) return { valid: false };
+  if (!isString(r.date) || !DATE_REGEX.test(r.date)) return { valid: false };
+  if (r.status !== 'present' && r.status !== 'absent' && r.status !== 'cancelled') return { valid: false };
   
   return {
     valid: true,
     data: {
-      id: rec.id.trim(),
-      subjectId: rec.subjectId.trim(),
-      date: rec.date,
-      status: rec.status
+      id: r.id.trim(),
+      subjectId: r.subjectId.trim(),
+      date: r.date,
+      status: r.status
     }
   };
 }
 
-function validateSettings(set: any): { valid: boolean; data?: any } {
+function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } {
   if (!set || typeof set !== 'object') return { valid: false };
-  if (!isNumber(set.globalThreshold) || set.globalThreshold < 0 || set.globalThreshold > 1) return { valid: false };
-  if (!isNumber(set.warningBuffer) || set.warningBuffer < 0 || set.warningBuffer > 1) return { valid: false };
-  if (!isBoolean(set.notificationsEnabled)) return { valid: false };
+  const s = set as Record<string, unknown>;
+  if (!isNumber(s.globalThreshold) || s.globalThreshold < 0 || s.globalThreshold > 1) return { valid: false };
+  if (!isNumber(s.warningBuffer) || s.warningBuffer < 0 || s.warningBuffer > 1) return { valid: false };
+  if (!isBoolean(s.notificationsEnabled)) return { valid: false };
   
   const validReminderMinutes = [5, 10, 15, 30];
-  if (!validReminderMinutes.includes(set.reminderMinutesBefore)) return { valid: false };
+  if (!validReminderMinutes.includes(s.reminderMinutesBefore as number)) return { valid: false };
   
-  if (!isBoolean(set.holidayMode)) return { valid: false };
-  if (!isBoolean(set.hapticsEnabled)) return { valid: false };
+  if (!isBoolean(s.holidayMode)) return { valid: false };
+  if (!isBoolean(s.hapticsEnabled)) return { valid: false };
   
   const validThemes = ['light', 'dark', 'oled', 'system'];
-  if (!validThemes.includes(set.theme)) return { valid: false };
+  if (!validThemes.includes(s.theme as string)) return { valid: false };
 
   const validAccents = ['blue', 'purple', 'emerald', 'amber', 'rose'];
-  const themeAccent = validAccents.includes(set.themeAccent) ? set.themeAccent : 'blue';
+  const themeAccent = validAccents.includes(s.themeAccent as string) ? (s.themeAccent as AppSettings['themeAccent']) : 'blue';
   
-  const result: any = {
-    globalThreshold: set.globalThreshold,
-    warningBuffer: set.warningBuffer,
-    notificationsEnabled: set.notificationsEnabled,
-    preClassReminder: set.preClassReminder !== false,
-    postClassReminder: set.postClassReminder !== false,
-    sundaySummaryNotification: set.sundaySummaryNotification !== false,
-    reminderMinutesBefore: set.reminderMinutesBefore,
-    holidayMode: set.holidayMode,
-    hapticsEnabled: set.hapticsEnabled,
-    theme: set.theme,
+  const result: AppSettings = {
+    semesterEndDate: isString(s.semesterEndDate) ? s.semesterEndDate : '',
+    globalThreshold: s.globalThreshold,
+    warningBuffer: s.warningBuffer,
+    notificationsEnabled: s.notificationsEnabled,
+    preClassReminder: s.preClassReminder !== false,
+    postClassReminder: s.postClassReminder !== false,
+    sundaySummaryNotification: s.sundaySummaryNotification !== false,
+    reminderMinutesBefore: s.reminderMinutesBefore as 5 | 10 | 15 | 30,
+    holidayMode: s.holidayMode,
+    hapticsEnabled: s.hapticsEnabled,
+    theme: s.theme as AppSettings['theme'],
     themeAccent,
   };
 
-  if (set.semesterEndDate !== undefined) {
-    if (!isString(set.semesterEndDate)) return { valid: false };
-    const datePart = set.semesterEndDate.split('T')[0];
+  if (s.semesterEndDate !== undefined) {
+    if (!isString(s.semesterEndDate)) return { valid: false };
+    const datePart = s.semesterEndDate.split('T')[0];
     if (!DATE_REGEX.test(datePart)) return { valid: false };
-    result.semesterEndDate = set.semesterEndDate;
+    result.semesterEndDate = s.semesterEndDate;
+  }
+
+  // Validate holidays
+  if (Array.isArray(s.holidays)) {
+    const validatedHolidays: Holiday[] = [];
+    for (const h of s.holidays) {
+      if (h && typeof h === 'object') {
+        const item = h as Record<string, unknown>;
+        if (isString(item.id) && isString(item.name) && isString(item.startDate) && isString(item.endDate)) {
+          if (DATE_REGEX.test(item.startDate) && DATE_REGEX.test(item.endDate)) {
+            validatedHolidays.push({
+              id: item.id.trim(),
+              name: sanitizeName(item.name) || 'Holiday',
+              startDate: item.startDate,
+              endDate: item.endDate,
+            });
+          }
+        }
+      }
+    }
+    result.holidays = validatedHolidays;
   }
 
   return {
@@ -193,49 +231,57 @@ function validateSettings(set: any): { valid: boolean; data?: any } {
   };
 }
 
-function validateArchivedSemester(sem: any): { valid: boolean; data?: any } {
+function validateArchivedSemester(sem: unknown): { valid: boolean; data?: ArchivedSemester } {
   if (!sem || typeof sem !== 'object') return { valid: false };
-  if (!isString(sem.id) || !sem.id.trim()) return { valid: false };
-  if (!isString(sem.name)) return { valid: false };
+  const s = sem as Record<string, unknown>;
+  if (!isString(s.id) || !s.id.trim()) return { valid: false };
+  if (!isString(s.name)) return { valid: false };
   
-  const sanitizedName = sanitizeName(sem.name);
+  const sanitizedName = sanitizeName(s.name);
   if (!sanitizedName || sanitizedName.length > 50) return { valid: false };
   
-  if (!isString(sem.endDate)) return { valid: false };
-  if (!isString(sem.archivedAt)) return { valid: false };
-  if (!isNumber(sem.overallPct) || sem.overallPct < 0 || sem.overallPct > 100) return { valid: false };
+  if (!isString(s.endDate)) return { valid: false };
+  if (!isString(s.archivedAt)) return { valid: false };
+  if (!isNumber(s.overallPct) || s.overallPct < 0 || s.overallPct > 100) return { valid: false };
   
-  if (!Array.isArray(sem.subjects)) return { valid: false };
-  const validatedSubjects: any[] = [];
-  for (const sub of sem.subjects) {
+  if (!Array.isArray(s.subjects)) return { valid: false };
+  const validatedSubjects: Subject[] = [];
+  for (const sub of s.subjects) {
     const v = validateSubject(sub);
-    if (!v.valid) return { valid: false };
+    if (!v.valid || !v.data) return { valid: false };
     validatedSubjects.push(v.data);
   }
   
-  if (!Array.isArray(sem.records)) return { valid: false };
-  const validatedRecords: any[] = [];
-  for (const rec of sem.records) {
+  if (!Array.isArray(s.records)) return { valid: false };
+  const validatedRecords: AttendanceRecord[] = [];
+  for (const rec of s.records) {
     const v = validateAttendanceRecord(rec);
-    if (!v.valid) return { valid: false };
+    if (!v.valid || !v.data) return { valid: false };
     validatedRecords.push(v.data);
   }
   
   return {
     valid: true,
     data: {
-      id: sem.id.trim(),
+      id: s.id.trim(),
       name: sanitizedName,
-      endDate: sem.endDate,
-      archivedAt: sem.archivedAt,
-      overallPct: sem.overallPct,
+      endDate: s.endDate,
+      archivedAt: s.archivedAt,
+      overallPct: s.overallPct,
       subjects: validatedSubjects,
       records: validatedRecords
     }
   };
 }
 
-export function validateImportPayload(data: unknown): { valid: boolean; error?: string; data?: any } {
+export interface ValidatedImportPayload {
+  subjects: Subject[];
+  attendance: AttendanceRecord[];
+  settings?: AppSettings;
+  archived_semesters?: ArchivedSemester[];
+}
+
+export function validateImportPayload(data: unknown): { valid: boolean; error?: string; data?: ValidatedImportPayload } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Import payload must be a valid JSON object.' };
   }
@@ -244,7 +290,7 @@ export function validateImportPayload(data: unknown): { valid: boolean; error?: 
     return { valid: false, error: 'Prototype pollution detected in import payload.' };
   }
 
-  const payload = data as any;
+  const payload = data as Record<string, unknown>;
 
   // Validate subjects
   if (!payload.subjects || !Array.isArray(payload.subjects)) {
@@ -253,10 +299,10 @@ export function validateImportPayload(data: unknown): { valid: boolean; error?: 
   if (payload.subjects.length > 100) {
     return { valid: false, error: 'Subjects count exceeds the limit of 100.' };
   }
-  const sanitizedSubjects: any[] = [];
+  const sanitizedSubjects: Subject[] = [];
   for (let i = 0; i < payload.subjects.length; i++) {
     const v = validateSubject(payload.subjects[i]);
-    if (!v.valid) {
+    if (!v.valid || !v.data) {
       return { valid: false, error: `Invalid subject schema at index ${i}.` };
     }
     sanitizedSubjects.push(v.data);
@@ -269,27 +315,27 @@ export function validateImportPayload(data: unknown): { valid: boolean; error?: 
   if (payload.attendance.length > 50000) {
     return { valid: false, error: 'Attendance records count exceeds the limit of 50,000.' };
   }
-  const sanitizedAttendance: any[] = [];
+  const sanitizedAttendance: AttendanceRecord[] = [];
   for (let i = 0; i < payload.attendance.length; i++) {
     const v = validateAttendanceRecord(payload.attendance[i]);
-    if (!v.valid) {
+    if (!v.valid || !v.data) {
       return { valid: false, error: `Invalid attendance record schema at index ${i}.` };
     }
     sanitizedAttendance.push(v.data);
   }
 
   // Validate settings (optional)
-  let sanitizedSettings: any = undefined;
+  let sanitizedSettings: AppSettings | undefined = undefined;
   if (payload.settings !== undefined) {
     const v = validateSettings(payload.settings);
-    if (!v.valid) {
+    if (!v.valid || !v.data) {
       return { valid: false, error: 'Invalid settings schema.' };
     }
     sanitizedSettings = v.data;
   }
 
   // Validate archived_semesters (optional)
-  const sanitizedArchived: any[] = [];
+  const sanitizedArchived: ArchivedSemester[] = [];
   if (payload.archived_semesters !== undefined) {
     if (!Array.isArray(payload.archived_semesters)) {
       return { valid: false, error: '"archived_semesters" must be an array.' };
@@ -299,14 +345,14 @@ export function validateImportPayload(data: unknown): { valid: boolean; error?: 
     }
     for (let i = 0; i < payload.archived_semesters.length; i++) {
       const v = validateArchivedSemester(payload.archived_semesters[i]);
-      if (!v.valid) {
+      if (!v.valid || !v.data) {
         return { valid: false, error: `Invalid archived semester schema at index ${i}.` };
       }
       sanitizedArchived.push(v.data);
     }
   }
 
-  const result: any = {
+  const result: ValidatedImportPayload = {
     subjects: sanitizedSubjects,
     attendance: sanitizedAttendance,
   };

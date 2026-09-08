@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_VERSION_NAME } from '../lib/constants';
 
 interface Props {
   title: string;
@@ -21,7 +22,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
       <div className="flex-1 overflow-y-auto p-6 text-slate-600 dark:text-slate-300 text-sm leading-relaxed space-y-6">
         {type === 'privacy' ? (
           <>
-            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 19, 2026 &bull; Version 2.1.0</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 29, 2026 &bull; Version {APP_VERSION_NAME}</p>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">1. Introduction</h3>
@@ -30,7 +31,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
 
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Our Privacy Commitment</h3>
-              <p>BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-collection architecture</span>. All your data — including attendance records, subject schedules, semester preferences, and application settings — is stored exclusively on your device using the platform's native encrypted key-value storage (SharedPreferences on Android, UserDefaults on iOS). We do not operate backend servers, databases, cloud infrastructure, or analytics platforms of any kind.</p>
+              <p>BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-collection architecture</span>. All your data — including attendance records, subject schedules, semester preferences, and application settings — is stored exclusively on your device using the platform's native encrypted key-value storage (SharedPreferences on Android). We do not operate backend servers, databases, cloud infrastructure, or analytics platforms of any kind.</p>
               <p className="mt-2">In simple terms: <span className="text-slate-900 dark:text-white font-bold italic">your data never leaves your device</span>.</p>
             </section>
 
@@ -41,6 +42,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
                 <li>Personal Identifiable Information (PII) such as your name, email address, phone number, or student ID</li>
                 <li>Location data, GPS coordinates, or IP addresses</li>
                 <li>Device identifiers (IMEI, Advertising ID, hardware serial numbers)</li>
+                <li>Biometric templates, fingerprint scans, or facial recognition geometry</li>
                 <li>Usage analytics, behavioural data, or session recordings</li>
                 <li>Crash logs or diagnostic telemetry</li>
                 <li>Contacts, photos, camera, microphone, or any media</li>
@@ -48,20 +50,24 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">4. Device Permissions</h3>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">4. Device Permissions & Biometrics</h3>
               <p>BunkCalc requests the following device permissions solely for the features described below. Each permission is opt-in and can be revoked at any time through your device's system settings.</p>
               <div className="mt-3 space-y-3">
+                <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
+                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Biometric Authentication (Fingerprint / Face ID)</p>
+                  <p className="text-xs">Used for optional biometric app lock. Verification is executed entirely through the Android OS BiometricPrompt API within the device's secure hardware enclave (TEE/Secure Element). BunkCalc NEVER accesses, stores, reads, or transmits biometric templates, raw fingerprints, or facial data.</p>
+                </div>
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
                   <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Notifications</p>
                   <p className="text-xs">Used to deliver scheduled class reminders before lectures, post-class attendance marking prompts, and threshold alerts when your attendance falls below the configured minimum. Notifications are scheduled locally on-device using the system alarm manager and are never routed through external push notification services.</p>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
                   <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Haptic Feedback / Vibration</p>
-                  <p className="text-xs">Used to provide tactile confirmation when marking attendance or interacting with buttons. This can be disabled in Settings {">"} Interaction {">"} Haptic Feedback.</p>
+                  <p className="text-xs">Used to provide tactile confirmation when marking attendance or interacting with buttons. This can be disabled in Settings &gt; Interaction &gt; Haptic Feedback.</p>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
                   <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">File Storage (Limited)</p>
-                  <p className="text-xs">Accessed only when you manually export a backup file or generate a shareable attendance card image. BunkCalc writes temporary files to the app's cache directory and does not scan, index, or access any other files on your device.</p>
+                  <p className="text-xs">Accessed only when you manually export a backup file, generate a calendar file (.ics), or generate a shareable attendance card image. BunkCalc writes temporary files to the app's cache directory and does not scan, index, or access any other files on your device.</p>
                 </div>
               </div>
             </section>
@@ -72,8 +78,8 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">6. Share Card Feature</h3>
-              <p>When you use the "Share Attendance Card" feature, BunkCalc renders your attendance summary as a PNG image on-device using HTML canvas rendering. The image is saved temporarily to your app cache and shared via your device's native share sheet. We do not intercept, upload, or retain a copy of any shared content.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">6. Share Card & Timetable QR Feature</h3>
+              <p>When you use the "Share Attendance Card" feature, BunkCalc renders your attendance summary as a PNG image on-device using HTML canvas rendering. When using Timetable Cloud & QR Sharing, timetable payloads are encoded into compact anonymous strings without any personal identifiable information. We do not intercept, track, or retain any personal content.</p>
             </section>
 
             <section>
@@ -85,7 +91,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">8. Data Retention & Deletion</h3>
               <p>Your data persists on your device until you take one of the following actions:</p>
               <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Use the <span className="font-bold text-slate-900 dark:text-white">Reset App</span> function in Settings {">"} Data Management</li>
+                <li>Use the <span className="font-bold text-slate-900 dark:text-white">Reset App</span> function in Settings &gt; Data Management</li>
                 <li>Clear the app's data or cache through your device's system settings</li>
                 <li>Uninstall the application</li>
               </ul>
@@ -104,7 +110,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
           </>
         ) : (
           <>
-            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 19, 2026 &bull; Version 2.1.0</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 29, 2026 &bull; Version {APP_VERSION_NAME}</p>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">1. Acceptance of Terms</h3>
@@ -113,14 +119,16 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Description of Service</h3>
-              <p>BunkCalc is a personal attendance management tool designed for university and college students in India. The App allows users to:</p>
+              <p>BunkCalc is a personal attendance management tool designed for university and college students. The App allows users to:</p>
               <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Track daily class attendance across multiple subjects</li>
-                <li>Calculate safe bunk budgets based on semester-forward calculations and target thresholds</li>
-                <li>Mark lab sessions (displayed as 2-hour timetable blocks without inflating attendance counts) and cancelled classes</li>
-                <li>Receive local push notifications for upcoming classes and attendance alerts</li>
-                <li>View semester-end projections, recovery mode guidance, and attendance statistics</li>
-                <li>Export, backup, and share attendance summaries</li>
+                <li>Track daily class attendance across multiple subjects with 1-tap quick marking and batch "Mark All Present"</li>
+                <li>Calculate safe bunk budgets based on semester-forward calculations and custom target thresholds</li>
+                <li>Secure the application with on-device Biometric Fingerprint / Face ID and 4-digit PIN authentication</li>
+                <li>Mark lab sessions (2-hour timetable blocks) and manage cancelled class pool adjustments</li>
+                <li>Receive smart local notifications for upcoming classes and attendance reminders</li>
+                <li>View weekly 7-day bunk strategies, semester-end projections, recovery mode guidance, and attendance analytics</li>
+                <li>Share and import class timetables via compact cloud codes or camera QR scanning</li>
+                <li>Export, backup, and restore attendance data locally via JSON, CSV spreadsheets, and PDF reports</li>
               </ul>
               <p className="mt-2">The App operates entirely offline with local-only data storage. No account creation, registration, or internet connection is required for core functionality.</p>
             </section>
@@ -137,7 +145,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
               <ul className="list-disc ml-5 mt-2 space-y-1">
                 <li>The accuracy of results depends entirely on the accuracy of the data you provide</li>
                 <li>BunkCalc does not sync with, verify against, or replace your institution's official attendance management system (e.g., SAP, ERP portals)</li>
-                <li>Discrepancies may arise due to institutional policies including but not limited to: retroactive attendance corrections, extra classes, make-up lectures, or administrative overrides</li>
+                <li>Discrepancies may arise due to institutional policies including retroactive attendance corrections, extra classes, or administrative overrides</li>
                 <li>You are solely responsible for cross-verifying your attendance with your institution's official records before making any academic decisions</li>
               </ul>
             </section>
@@ -205,7 +213,7 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
           </>
         )}
         <div className="pt-10 pb-10 text-center text-slate-400 dark:text-slate-500 text-[10px]">
-          Last Updated: August 19, 2026 &bull; BunkCalc v2.1.0 &bull; <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">PinecoXZ</a>
+          Last Updated: August 29, 2026 &bull; BunkCalc v{APP_VERSION_NAME} &bull; <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">PinecoXZ</a>
         </div>
       </div>
     </div>

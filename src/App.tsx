@@ -26,10 +26,12 @@ const OnboardingCarousel = lazy(() => import('./components/OnboardingCarousel'))
 const CalendarView = lazy(() => import('./pages/CalendarView'));
 import { TimetableShareModal } from './components/TimetableShareModal';
 import { WhatsNewFlashCard } from './components/WhatsNewFlashCard';
+import { AppLockModal } from './components/AppLockModal';
+import { executeBackHandler } from './lib/backHandler';
 import { APP_VERSION_NAME } from './lib/constants';
 
 function App() {
-  const { loadSettings, loadArchivedSemesters } = useSettings();
+  const { settings, loadSettings, loadArchivedSemesters } = useSettings();
   const { loadSubjects, subjects } = useSubjects();
   const { loadRecords } = useAttendance();
 
@@ -38,6 +40,7 @@ function App() {
   const [dataReady, setDataReady] = useState(false);
   const [homeVisible, setHomeVisible] = useState(false);     // controls fade-in opacity
   const [showWhatsNewFlashCard, setShowWhatsNewFlashCard] = useState(false);
+  const [isAppLocked, setIsAppLocked] = useState(true);
 
   const [autoImportCode, setAutoImportCode] = useState<string | null>(() => {
     try {
@@ -67,13 +70,20 @@ function App() {
 
   // ── Back button handler ──
   useEffect(() => {
-    let backButtonListener: any = null;
+    let backButtonListener: { remove: () => Promise<void> } | null = null;
 
     const setupBackButton = async () => {
       try {
         const { App: CapApp } = await import('@capacitor/app');
         backButtonListener = await CapApp.addListener('backButton', () => {
           if (showSplash) return;          // ignore during splash
+
+          // First check if any registered sub-view/modal handler consumed the back press
+          const consumed = executeBackHandler();
+          if (consumed) {
+            return;
+          }
+
           if (selectedSubject) {
             setSelectedSubject(null);
           } else if (showHistory) {
@@ -134,7 +144,7 @@ function App() {
     init();
 
     // Listen for 1-tap notification action clicks
-    let actionListener: any = null;
+    let actionListener: { remove: () => Promise<void> } | null = null;
     const setupActionListener = async () => {
       try {
         actionListener = await LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
@@ -252,6 +262,15 @@ function App() {
               }
               setShowWhatsNewFlashCard(false);
             }}
+          />
+        )}
+
+        {/* Security PIN & Fingerprint Lock Overlay */}
+        {settings?.appLockEnabled && settings?.appLockPin && isAppLocked && dataReady && !showSplash && (
+          <AppLockModal
+            correctPin={settings.appLockPin}
+            biometricsEnabled={settings?.biometricsEnabled !== false}
+            onSuccess={() => setIsAppLocked(false)}
           />
         )}
       </ErrorBoundary>

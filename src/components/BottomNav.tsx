@@ -24,7 +24,7 @@ const BottomNav: React.FC<Props> = ({ activeTab, setActiveTab }) => {
     if (settings.hapticsEnabled) {
       try {
         await Haptics.impact({ style: ImpactStyle.Light });
-      } catch (e) {
+      } catch {
         // Haptics fallback on web
       }
     }

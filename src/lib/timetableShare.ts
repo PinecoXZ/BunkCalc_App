@@ -1,4 +1,4 @@
-import type { Subject, ScheduleSlot } from './types';
+﻿import type { Subject, ScheduleSlot } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateQRCodeSVG } from './qrCode';
 
@@ -16,7 +16,7 @@ export const encodeCompactPayload = (subjects: Subject[], sectionName?: string):
     const credits = s.credits || 3;
     const thresholdPct = Math.round((s.threshold || 0.75) * 100);
     const isLab = s.isLab ? 1 : 0;
-    const color = (s as any).color || '#3b82f6';
+    const color = s.color || '#3b82f6';
     const slots = (s.schedule || []).map(sc => `${sc.day}@${sc.slot}`).join(',');
     return `${cleanName}|${credits}|${thresholdPct}|${isLab}|${color}|${slots}`;
   });
@@ -217,7 +217,17 @@ export const decodeTimetable = async (input: string): Promise<{ sectionName: str
     const subjects: Subject[] = subjectChunks
       .filter(chunk => chunk.trim().length > 0 && chunk.includes('|'))
       .map(chunk => {
-        const [name, creditsStr, thresholdStr, isLabStr, color, slotsStr] = chunk.split('|');
+        const fields = chunk.split('|');
+        let name: string, creditsStr: string, thresholdStr: string, isLabStr: string, color: string, slotsStr: string;
+
+        if (fields.length === 5) {
+          // Legacy 5-field format: name|credits|threshold|isLab|slots
+          [name, creditsStr, thresholdStr, isLabStr, slotsStr] = fields;
+          color = '#3b82f6';
+        } else {
+          // Current 6-field format: name|credits|threshold|isLab|color|slots
+          [name, creditsStr, thresholdStr, isLabStr, color, slotsStr] = fields;
+        }
         if (!name) throw new Error('Invalid subject in timetable code');
 
         const schedule: ScheduleSlot[] = (slotsStr || '')
@@ -260,22 +270,26 @@ export const decodeTimetable = async (input: string): Promise<{ sectionName: str
       const base64 = raw.slice(LEGACY_PREFIX.length);
       const jsonStr = decodeURIComponent(atob(base64));
       const data = JSON.parse(jsonStr);
-      const subjects: Subject[] = (data.subjects || []).map((s: any) => ({
-        id: uuidv4(),
-        name: String(s.name).trim(),
-        code: s.code?.trim() || '',
-        credits: Number(s.credits) || 3,
-        threshold: Number(s.threshold) || 0.75,
-        isLab: !!s.isLab,
-        color: s.color || '#3b82f6',
-        schedule: (s.schedule || []).map((sc: any) => ({
-          day: Number(sc.day),
-          slot: sc.slot,
-        })),
-        attendedSoFar: 0,
-        missedSoFar: 0,
-      }));
-      return { sectionName: data.sectionName || 'Imported Timetable', subjects };
+      const rawSubjects = Array.isArray(data.subjects) ? (data.subjects as Array<Record<string, unknown>>) : [];
+      const subjects: Subject[] = rawSubjects.map((s) => {
+        const rawSchedule = Array.isArray(s.schedule) ? (s.schedule as Array<Record<string, unknown>>) : [];
+        return {
+          id: uuidv4(),
+          name: String(s.name || '').trim(),
+          code: typeof s.code === 'string' ? s.code.trim() : '',
+          credits: Number(s.credits) || 3,
+          threshold: Number(s.threshold) || 0.75,
+          isLab: Boolean(s.isLab),
+          color: typeof s.color === 'string' ? s.color : '#3b82f6',
+          schedule: rawSchedule.map((sc) => ({
+            day: Number(sc.day),
+            slot: String(sc.slot || '09:00'),
+          })),
+          attendedSoFar: 0,
+          missedSoFar: 0,
+        };
+      });
+      return { sectionName: typeof data.sectionName === 'string' ? data.sectionName : 'Imported Timetable', subjects };
     } catch {
       throw new Error('Invalid timetable format.');
     }
@@ -301,7 +315,7 @@ export const buildShareMessage = (
 ): string => {
   const cleanSection = sectionName?.trim() || 'Class Schedule';
   return (
-    `*BunkCalc — Class Timetable*\n` +
+    `*BunkCalc â€” Class Timetable*\n` +
     `Section: ${cleanSection}\n\n` +
     `I've set up our official weekly timetable in BunkCalc with all class and lab timings pre-configured.\n\n` +
     `Timetable Code: \`${shortCode}\`\n\n` +
@@ -366,7 +380,17 @@ export const generateTimetableCardBlob = (
         const qrBoxY = 140;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28);
+        // Polyfill roundRect for older WebViews
+        if (typeof ctx.roundRect !== 'function') {
+          ctx.moveTo(qrBoxX + 28, qrBoxY);
+          ctx.arcTo(qrBoxX + qrBoxSize, qrBoxY, qrBoxX + qrBoxSize, qrBoxY + qrBoxSize, 28);
+          ctx.arcTo(qrBoxX + qrBoxSize, qrBoxY + qrBoxSize, qrBoxX, qrBoxY + qrBoxSize, 28);
+          ctx.arcTo(qrBoxX, qrBoxY + qrBoxSize, qrBoxX, qrBoxY, 28);
+          ctx.arcTo(qrBoxX, qrBoxY, qrBoxX + qrBoxSize, qrBoxY, 28);
+          ctx.closePath();
+        } else {
+          ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28);
+        }
         ctx.fill();
 
         // Draw QR Code inside box with padding
@@ -376,7 +400,7 @@ export const generateTimetableCardBlob = (
         ctx.fillStyle = '#64748b'; // slate-500
         ctx.font = '600 13px system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Scan with BunkCalc • bunk-calc-web.vercel.app', width / 2, 630);
+        ctx.fillText('Scan with BunkCalc â€¢ bunk-calc-web.vercel.app', width / 2, 630);
 
         URL.revokeObjectURL(blobUrl);
 
@@ -397,4 +421,5 @@ export const generateTimetableCardBlob = (
     }
   });
 };
+
 

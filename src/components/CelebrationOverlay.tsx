@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
 interface Props {
   type: 'present' | 'absent' | null;
@@ -12,32 +12,22 @@ interface Particle {
   size: number;
   color: string;
   rotation: number;
-  speedX: number;
-  speedY: number;
 }
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#a855f7', '#10b981'];
 
-const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
-  const [particles, setParticles] = useState<Particle[]>([]);
+const STATIC_PARTICLES: Particle[] = Array.from({ length: 45 }).map((_, i) => ({
+  id: i,
+  x: (i * 37) % 100,
+  y: -10 - ((i * 13) % 20),
+  size: 6 + (i % 8),
+  color: COLORS[i % COLORS.length],
+  rotation: (i * 73) % 360,
+}));
 
+const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
   useEffect(() => {
     if (!type) return;
-
-    if (type === 'present') {
-      // Generate 40 confetti particles
-      const newParticles: Particle[] = Array.from({ length: 45 }).map((_, i) => ({
-        id: i,
-        x: Math.random() * 100, // %
-        y: -10 - Math.random() * 20, // %
-        size: Math.random() * 8 + 6, // px
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        rotation: Math.random() * 360,
-        speedX: (Math.random() - 0.5) * 40,
-        speedY: Math.random() * 80 + 100,
-      }));
-      setParticles(newParticles);
-    }
 
     const timer = setTimeout(() => {
       onDone();
@@ -53,7 +43,7 @@ const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
       {type === 'present' && (
         <>
           {/* Confetti particles */}
-          {particles.map((p) => (
+          {STATIC_PARTICLES.map((p) => (
             <div
               key={p.id}
               style={{
@@ -72,7 +62,10 @@ const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
 
           {/* Central Present Celebration Toast */}
           <div className="bg-emerald-600 text-white font-black px-6 py-3 rounded-full shadow-2xl border-2 border-emerald-300 animate-in zoom-in-50 fade-in duration-200 flex items-center gap-2 text-sm tracking-wider uppercase">
-            <span className="text-xl">🎉</span> GREAT JOB! ATTENDED!
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Class Attended</span>
           </div>
         </>
       )}
@@ -80,7 +73,10 @@ const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
       {type === 'absent' && (
         <div className="inset-0 absolute bg-red-500/20 animate-pulse border-4 border-red-500/50 rounded-none flex items-center justify-center pointer-events-none">
           <div className="bg-red-600 text-white font-black px-6 py-3 rounded-full shadow-2xl border-2 border-red-300 animate-in zoom-in-50 fade-in duration-200 flex items-center gap-2 text-sm tracking-wider uppercase">
-            <span className="text-xl">⚠️</span> ABSENT LOGGED!
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>Absent Logged</span>
           </div>
         </div>
       )}

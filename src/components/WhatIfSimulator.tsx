@@ -115,6 +115,10 @@ const WhatIfSimulator: React.FC = () => {
                 value={bunkCount}
                 onChange={(e) => setBunkCount(parseInt(e.target.value))}
                 className="w-full accent-purple-500"
+                aria-valuemin={1}
+                aria-valuemax={20}
+                aria-valuenow={bunkCount}
+                aria-label="Number of classes to skip"
               />
             </div>
 

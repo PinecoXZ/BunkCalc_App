@@ -6,6 +6,7 @@ import type { Subject } from '../lib/types';
 import { sanitizeName } from '../lib/validation';
 import { AppModal } from '../components/AppModal';
 import { TimetableShareModal } from '../components/TimetableShareModal';
+import { TimetableScannerModal } from '../components/TimetableScannerModal';
 
 const Setup: React.FC = () => {
   const { addSubject } = useSubjects();
@@ -14,6 +15,7 @@ const Setup: React.FC = () => {
   const [step, setStep] = useState(1);
   const [tempSubjects, setTempSubjects] = useState<Subject[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   
   // Current subject being added
   const [name, setName] = useState('');
@@ -26,6 +28,8 @@ const Setup: React.FC = () => {
   const [missedSoFar, setMissedSoFar] = useState<number>(0);
 
   const [subjectThreshold, setSubjectThreshold] = useState<number>(settings.globalThreshold);
+  const [room, setRoom] = useState('');
+  const [faculty, setFaculty] = useState('');
 
   // Modal Dialog state
   const [modal, setModal] = useState<{
@@ -66,9 +70,13 @@ const Setup: React.FC = () => {
       credits,
       threshold: subjectThreshold,
       isLab,
+      room: room.trim() || undefined,
+      faculty: faculty.trim() || undefined,
       schedule: days.map(day => ({ 
         day, 
-        slot: useCustomTime ? scheduleMap[day] : globalSlot 
+        slot: useCustomTime ? scheduleMap[day] : globalSlot,
+        room: room.trim() || undefined,
+        faculty: faculty.trim() || undefined,
       })),
       attendedSoFar: Math.max(0, attendedSoFar),
       missedSoFar: Math.max(0, missedSoFar),
@@ -80,6 +88,8 @@ const Setup: React.FC = () => {
     setName('');
     setCredits(3);
     setIsLab(false);
+    setRoom('');
+    setFaculty('');
     setUseCustomTime(false);
     setGlobalTime('09:00');
     setScheduleMap({});
@@ -136,7 +146,7 @@ const Setup: React.FC = () => {
               <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Semester End Date</label>
               <input 
                 type="date" 
-                value={settings.semesterEndDate.split('T')[0]}
+                value={(settings.semesterEndDate || '').split('T')[0]}
                 onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
               />
@@ -145,7 +155,8 @@ const Setup: React.FC = () => {
 
           <button 
             onClick={() => {
-              const endDate = new Date(settings.semesterEndDate);
+              const [y, m, d] = settings.semesterEndDate.split('-').map(Number);
+              const endDate = new Date(y, m - 1, d);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               if (endDate <= today) {
@@ -183,23 +194,46 @@ const Setup: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick Import from Classmate Banner */}
-          <div 
-            onClick={() => setShowImportModal(true)}
-            className="mb-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/25 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-blue-500/40 active:scale-[0.99] transition-all shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">⚡</span>
-              <div>
+          {/* Quick Import Actions Grid */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div 
+              onClick={() => setShowScannerModal(true)}
+              className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/25 p-3.5 rounded-2xl flex flex-col justify-between cursor-pointer hover:border-blue-500/40 active:scale-[0.98] transition-all shadow-sm group"
+            >
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
                 <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                  Got a Code / QR from a Classmate?
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Import your section's entire timetable in 1 second
+                  Scan Photo
                 </p>
               </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Snap or upload timetable screenshot
+              </p>
             </div>
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Import →</span>
+
+            <div 
+              onClick={() => setShowImportModal(true)}
+              className="bg-gradient-to-br from-purple-600/10 to-pink-600/10 border border-purple-500/25 p-3.5 rounded-2xl flex flex-col justify-between cursor-pointer hover:border-purple-500/40 active:scale-[0.98] transition-all shadow-sm group"
+            >
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <p className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                  Class Code / QR
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Import from section classmate
+              </p>
+            </div>
           </div>
           
           <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
@@ -215,6 +249,29 @@ const Setup: React.FC = () => {
                 />
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Room / Hall (Optional)</label>
+                  <input 
+                    placeholder="e.g. Room 304" 
+                    value={room}
+                    onChange={(e) => setRoom(e.target.value)}
+                    maxLength={25}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Faculty (Optional)</label>
+                  <input 
+                    placeholder="e.g. Prof. Sharma" 
+                    value={faculty}
+                    onChange={(e) => setFaculty(e.target.value)}
+                    maxLength={30}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Credits</label>
@@ -273,6 +330,9 @@ const Setup: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setUseCustomTime(!useCustomTime)}
+                  role="switch"
+                  aria-checked={useCustomTime}
+                  aria-label="Custom timing per day"
                   className={`w-10 h-5 rounded-full transition-colors relative ${useCustomTime ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                 >
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useCustomTime ? 'left-5' : 'left-1'}`}></div>
@@ -364,6 +424,7 @@ const Setup: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setTempSubjects(tempSubjects.filter((_, idx) => idx !== i))}
+                  aria-label="Remove subject"
                   className="text-red-500 p-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -402,8 +463,18 @@ const Setup: React.FC = () => {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
       />
+
+      {/* Timetable Photo & Text Scanner Modal */}
+      <TimetableScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onApplySubjects={(scanned) => {
+          setTempSubjects([...tempSubjects, ...scanned]);
+        }}
+      />
     </div>
   );
 };
 
 export default Setup;
+

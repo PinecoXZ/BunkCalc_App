@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+﻿import html2canvas from 'html2canvas';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
@@ -96,9 +96,10 @@ export const shareAttendanceCard = async (): Promise<{ success: boolean; method?
     document.body.removeChild(link);
 
     return { success: true, method: 'download' };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('Detailed sharing error:', error);
-    return { success: false, error: error.message || 'Failed to generate share card.' };
+    return { success: false, error: errorMsg || 'Failed to generate share card.' };
   } finally {
     if (tempContainer && tempContainer.parentNode) {
       tempContainer.parentNode.removeChild(tempContainer);

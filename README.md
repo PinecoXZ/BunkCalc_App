@@ -4,7 +4,6 @@
 
 ### _Take Control of Your College Life._
 
-[![Version](https://img.shields.io/badge/version-2.2.1-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![Version](https://img.shields.io/badge/version-2.2.2-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![Platform](https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/PinecoXZ/BunkCalc_App)
 [![License](https://img.shields.io/badge/license-Private-red?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
@@ -23,23 +22,16 @@ Biometric fingerprint lock. 1-tap quick actions. 10 modular settings hubs. Class
 | Feature | Description |
 |---|---|
 | ⚡ **1-Tap Attendance & Batch Action** | Direct 1-tap `[Present]` / `[Absent]` marking on cards plus a "Mark All Present" batch action with daily progress bar |
-| 🔍 **Subject Filter Chips & 4-Way Sort** | Instant search by room or faculty, filter chips (`All`, `In Danger`, `Safe`, `Labs`), and 4-way sorting |
-| ⚡ **Timetable Cloud & QR Sharing** | Share and import full section timetables in 1 second with 6-letter short codes or camera QR scanning |
 | 📥 **Mid-Semester Past Attendance** | Enter past attended and missed class numbers during timetable import or edit them anytime in Subject Details |
 | ✏️ **Interactive Holiday Manager** | Add and manage semester breaks directly with automated reminder rescheduling and calendar sync |
-| 🎯 **Weekly Bunk Strategy** | Smart 7-day tactical roadmap showing safe skips and exact consecutive classes needed for recovery |
 | 📊 **Weekly Attendance Trends** | 8-week visual bar chart tracking your weekly attendance percentage against your threshold |
 | ⏳ **Semester Progress Bar** | Real-time timeline bar tracking weeks remaining in the semester and elapsed class days |
-| 📂 **CSV & PDF Exports** | Download your complete attendance records as CSV spreadsheets or export formatted PDF reports |
 | 🔍 **History Search & Filters** | Filter attendance logs by subject, status (Present/Absent/Cancelled), or custom date range |
-| 🛡️ **Delete Safety Confirmations** | Built-in confirmation dialogs prevent accidental deletion of attendance records or subject profiles |
 | 🔔 **Smart Local Notifications** | Post-class attendance prompts with 10-minute delayed dispatch and automated duplicate suppression |
 | 📅 **Today View** | See your daily schedule at a glance with interactive swipe-marking |
 | 📈 **Statistics Dashboard** | Rich analytics with per-subject and overall attendance percentages |
-| 🗂️ **Semester Archives** | Automatically archive past semesters and browse your academic history |
 | 📴 **Fully Offline** | All data stored locally on-device — no internet, no servers, no tracking |
 | 📤 **Import / Export** | Backup and restore your data via validated JSON files |
-| 🔐 **Security Hardened** | Strict CSP, input sanitisation, schema validation, prototype pollution prevention |
 
 ---
 
@@ -74,9 +66,6 @@ BunkCalc1/
 │           └── res/          # Launcher icons (mdpi → xxxhdpi) + splash
 ├── src/
 │   ├── components/           # Reusable UI components
-│   │   ├── AppLockModal.tsx     # Biometric / PIN App Lock
-│   │   ├── PinSetupModal.tsx    # 4-Digit Tactile PIN Keypad
-│   │   ├── WeeklyStrategyModal.tsx # 7-day recovery roadmap
 │   │   ├── WhatIfSimulator.tsx  # Bunk prediction simulator
 │   │   ├── WeeklyChart.tsx      # 8-week attendance trend chart
 │   │   ├── SemesterProgress.tsx # Semester timeline progress bar
@@ -92,16 +81,11 @@ BunkCalc1/
 │   │   ├── Today.tsx            # Today's schedule (with progress bar)
 │   │   ├── Statistics.tsx       # Analytics (with WeeklyChart & WhatIfSimulator)
 │   │   ├── Settings.tsx         # 10 modular settings sub-pages + search
-│   │   ├── Setup.tsx            # First-run setup
-│   │   ├── SubjectDetail.tsx    # Individual subject view
-│   │   └── CalendarView.tsx     # Calendar view
 │   ├── store/                # Zustand state management
 │   │   ├── useSubjects.ts
 │   │   ├── useAttendance.ts
 │   │   └── useSettings.ts
 │   ├── lib/                  # Business logic & utilities
-│   │   ├── biometrics.ts        # Capacitor BiometricAuth & WebAuthn wrapper
-│   │   ├── calculations.ts      # Attendance math engine
 │   │   ├── validation.ts        # Input sanitisation & import validation
 │   │   ├── notifications.ts     # Local notification scheduling (collision-free)
 │   │   ├── permissions.ts       # Native permission requests
@@ -193,9 +177,7 @@ BunkCalc takes security seriously, even as a fully offline application:
 | `npm run dev` | Start Vite dev server with HMR |
 | `npm run build` | TypeScript check + production build |
 | `npm run lint` | Run ESLint across the codebase |
-| `npm run preview` | Preview the production build locally |
 | `npx cap sync android` | Sync web assets → Android native project |
-| `npx cap open android` | Open the Android project in Android Studio |
 
 ---
 
@@ -209,7 +191,6 @@ This project is **private** and not open-source. All rights reserved.
 
 **Built with ❤️ for students who know when to show up — and when not to.**
 
-`v2.2.1` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
 `v2.2.2` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
 
 </div>

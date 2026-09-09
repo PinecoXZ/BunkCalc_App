@@ -5,6 +5,7 @@
 ### _Take Control of Your College Life._
 
 [![Version](https://img.shields.io/badge/version-2.2.1-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
+[![Version](https://img.shields.io/badge/version-2.2.2-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![Platform](https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/PinecoXZ/BunkCalc_App)
 [![License](https://img.shields.io/badge/license-Private-red?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
@@ -67,6 +68,7 @@ BunkCalc1/
 ├── android/                  # Native Android project (Capacitor-managed)
 │   └── app/
 │       ├── build.gradle      # Android build config (versionCode 8, v2.2.1)
+│       ├── build.gradle      # Android build config (versionCode 9, v2.2.2)
 │       └── src/main/
 │           ├── assets/       # Synced web bundle + public assets
 │           └── res/          # Launcher icons (mdpi → xxxhdpi) + splash
@@ -208,5 +210,6 @@ This project is **private** and not open-source. All rights reserved.
 **Built with ❤️ for students who know when to show up — and when not to.**
 
 `v2.2.1` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
+`v2.2.2` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
 
 </div>

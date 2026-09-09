@@ -70,6 +70,35 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
         {settings.notificationsEnabled && (
           <>
+            {/* Tone & Personality Mode Toggle */}
+            <div className="p-4 flex justify-between items-start bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+              <div className="max-w-[75%]">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-sm">Meme Roast Mode 💀</p>
+                  {settings.toneMode === 'meme' && (
+                    <span className="text-[10px] font-black uppercase bg-purple-500/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">Active</span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {settings.toneMode === 'meme' 
+                    ? 'Savage reality checks & humorous attendance reactions'
+                    : 'Standard clean & professional notification style'}
+                </p>
+                {settings.toneMode === 'meme' && (
+                  <div className="mt-2 text-[11px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5">
+                    <span>💬</span>
+                    <span className="italic">"The professor is currently drawing a red circle around your roll number 💀"</span>
+                  </div>
+                )}
+              </div>
+              <button 
+                onClick={() => setSettings({ ...settings, toneMode: settings.toneMode === 'meme' ? 'standard' : 'meme' })}
+                className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ${settings.toneMode === 'meme' ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.toneMode === 'meme' ? 'left-7' : 'left-1'}`}></div>
+              </button>
+            </div>
+
             {/* Pre-Class Reminders */}
             <div className="p-4 flex justify-between items-center">
               <div>

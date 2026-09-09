@@ -12,7 +12,11 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
     <div className="fixed inset-0 bg-white dark:bg-black/95 z-[60] flex flex-col animate-in fade-in duration-200">
       <header className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-        <button onClick={onClose} className="bg-slate-200 dark:bg-slate-800 p-2 rounded-lg text-slate-600 dark:text-slate-300">
+        <button 
+          onClick={onClose} 
+          aria-label="Close modal"
+          className="bg-slate-200 dark:bg-slate-800 p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -22,198 +26,196 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
       <div className="flex-1 overflow-y-auto p-6 text-slate-600 dark:text-slate-300 text-sm leading-relaxed space-y-6">
         {type === 'privacy' ? (
           <>
-            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 29, 2026 &bull; Version {APP_VERSION_NAME}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs italic">
+              Effective Date: September 9, 2026 &bull; Version {APP_VERSION_NAME}
+            </p>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">1. Introduction</h3>
-              <p>BunkCalc ("the App", "we", "our", "us") is an attendance-tracking application developed by <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">PinecoXZ</a>. This Privacy Policy describes how the App handles information when you use BunkCalc on the web (https://bunk-calc-web.vercel.app/) or personal device. By using BunkCalc, you acknowledge that you have read and understood this Privacy Policy.</p>
+              <p>
+                BunkCalc (&quot;the App&quot;, &quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is an attendance-tracking application developed by{' '}
+                <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">
+                  PinecoXZ
+                </a>. This Privacy Policy describes how the App handles information when you use BunkCalc on your personal device or on the web. By using BunkCalc, you acknowledge and agree to this policy.
+              </p>
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Our Privacy Commitment</h3>
-              <p>BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-collection architecture</span>. All your data — including attendance records, subject schedules, semester preferences, and application settings — is stored exclusively on your device using the platform's native encrypted key-value storage (SharedPreferences on Android). We do not operate backend servers, databases, cloud infrastructure, or analytics platforms of any kind.</p>
-              <p className="mt-2">In simple terms: <span className="text-slate-900 dark:text-white font-bold italic">your data never leaves your device</span>.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Our Privacy Commitment: Zero Data Collection</h3>
+              <p>
+                BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-telemetry architecture</span>. All your data — including subjects, attendance history, past session counts, holiday managers, and notification preferences — is stored exclusively on your device using encrypted native storage (SharedPreferences / Preferences). We operate zero backend tracking servers, databases, or analytics engines.
+              </p>
+              <p className="mt-2 text-slate-900 dark:text-white font-bold italic">
+                In simple terms: your data never leaves your phone.
+              </p>
             </section>
 
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">3. Information We Do Not Collect</h3>
-              <p>We want to be unambiguous. BunkCalc does <span className="font-bold text-slate-900 dark:text-white">not</span> collect, transmit, store on remote servers, or share with any third parties:</p>
+              <p>BunkCalc does <span className="font-bold text-slate-900 dark:text-white">not</span> collect, store remotely, track, or share:</p>
               <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Personal Identifiable Information (PII) such as your name, email address, phone number, or student ID</li>
-                <li>Location data, GPS coordinates, or IP addresses</li>
-                <li>Device identifiers (IMEI, Advertising ID, hardware serial numbers)</li>
+                <li>Personally Identifiable Information (Name, student ID, roll number, phone, email)</li>
+                <li>Location, GPS coordinates, or IP addresses</li>
+                <li>Device identifiers (IMEI, Advertising ID, serial numbers)</li>
                 <li>Biometric templates, fingerprint scans, or facial recognition geometry</li>
-                <li>Usage analytics, behavioural data, or session recordings</li>
-                <li>Crash logs or diagnostic telemetry</li>
-                <li>Contacts, photos, camera, microphone, or any media</li>
+                <li>Behavioral analytics, tracking pixels, or third-party cookies</li>
+                <li>Crash telemetry or background usage telemetry</li>
+                <li>Contacts, photos, microphone, or external files</li>
               </ul>
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">4. Device Permissions & Biometrics</h3>
-              <p>BunkCalc requests the following device permissions solely for the features described below. Each permission is opt-in and can be revoked at any time through your device's system settings.</p>
-              <div className="mt-3 space-y-3">
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">4. Device Permissions Explained</h3>
+              <div className="space-y-3 mt-3">
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
-                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Biometric Authentication (Fingerprint / Face ID)</p>
-                  <p className="text-xs">Used for optional biometric app lock. Verification is executed entirely through the Android OS BiometricPrompt API within the device's secure hardware enclave (TEE/Secure Element). BunkCalc NEVER accesses, stores, reads, or transmits biometric templates, raw fingerprints, or facial data.</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">
+                    Biometric Authentication (Fingerprint / Face Unlock)
+                  </p>
+                  <p className="text-xs">
+                    Executed exclusively via Android&apos;s native BiometricPrompt API within the device&apos;s Secure Element (TEE). BunkCalc never accesses, inspects, or transmits biometric geometry.
+                  </p>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
-                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Notifications</p>
-                  <p className="text-xs">Used to deliver scheduled class reminders before lectures, post-class attendance marking prompts, and threshold alerts when your attendance falls below the configured minimum. Notifications are scheduled locally on-device using the system alarm manager and are never routed through external push notification services.</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">
+                    Local Notifications
+                  </p>
+                  <p className="text-xs">
+                    Class reminders, post-lecture prompts, and threshold alerts are scheduled directly into Android AlarmManager. No external push tokens or remote servers are employed.
+                  </p>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
-                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">Haptic Feedback / Vibration</p>
-                  <p className="text-xs">Used to provide tactile confirmation when marking attendance or interacting with buttons. This can be disabled in Settings &gt; Interaction &gt; Haptic Feedback.</p>
-                </div>
-                <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl">
-                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">File Storage (Limited)</p>
-                  <p className="text-xs">Accessed only when you manually export a backup file, generate a calendar file (.ics), or generate a shareable attendance card image. BunkCalc writes temporary files to the app's cache directory and does not scan, index, or access any other files on your device.</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">
+                    Cache &amp; Storage Access
+                  </p>
+                  <p className="text-xs">
+                    Accessed only when you manually trigger JSON backup exports, calendar .ics exports, or attendance card generation. All written files remain in app-specific sandbox cache.
+                  </p>
                 </div>
               </div>
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">5. Backup & Restore</h3>
-              <p>The Backup feature exports your data as a plain JSON file saved to your device's local storage. The Restore feature reads a previously exported JSON backup. Both operations are initiated manually by you and occur entirely on-device. We have no access to these backup files.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">5. Meme Roast Mode &amp; Sarcastic Notifications</h3>
+              <p>
+                BunkCalc offers an optional Meme Roast Mode providing humorous college notifications and attendance marking reactions. All meme phrases and roasts are static local strings evaluated on-device. No user input or habits are sent over the network to generate humor, and all faculty references strictly and generically refer to &quot;the professor&quot; without collecting or referencing specific instructor identities.
+              </p>
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">6. Share Card & Timetable QR Feature</h3>
-              <p>When you use the "Share Attendance Card" feature, BunkCalc renders your attendance summary as a PNG image on-device using HTML canvas rendering. When using Timetable Cloud & QR Sharing, timetable payloads are encoded into compact anonymous strings without any personal identifiable information. We do not intercept, track, or retain any personal content.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">6. Semester Attendance Wrapped &amp; Share Cards</h3>
+              <p>
+                Attendance cards (such as the Meme Wrapped card) are rendered on-device using client-side Canvas APIs. Images exist solely in temporary volatile device memory and are passed to native Android sharing sheets only when you explicitly tap share. BunkCalc maintains zero image hosting or tracking servers.
+              </p>
             </section>
 
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">7. Third-Party SDKs & Services</h3>
-              <p>BunkCalc is built using the open-source <span className="font-bold text-slate-900 dark:text-white">Apache Capacitor</span> framework. Capacitor plugins operate locally and do not transmit data to external servers. The App does not integrate any third-party analytics SDKs (Google Analytics, Firebase, Mixpanel, etc.), advertising networks, social media trackers, or crash reporting services.</p>
-            </section>
-
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">8. Data Retention & Deletion</h3>
-              <p>Your data persists on your device until you take one of the following actions:</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">7. Data Retention &amp; Permanent Deletion</h3>
+              <p>
+                Because no records exist on our servers, you retain absolute data sovereignty:
+              </p>
               <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Use the <span className="font-bold text-slate-900 dark:text-white">Reset App</span> function in Settings &gt; Data Management</li>
-                <li>Clear the app's data or cache through your device's system settings</li>
-                <li>Uninstall the application</li>
+                <li>Tap <span className="font-bold text-slate-900 dark:text-white">Reset App</span> in Settings to purge all local records immediately.</li>
+                <li>Clear application storage in Android System Settings.</li>
+                <li>Uninstalling BunkCalc irreversibly deletes all stored logs from the device.</li>
               </ul>
-              <p className="mt-2">Since all data is local, deletion is immediate and permanent. We cannot recover your data after deletion as we never had access to it.</p>
-            </section>
-
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">9. Children's Privacy</h3>
-              <p>BunkCalc is designed for university and college students (typically aged 17+). We do not knowingly target or collect data from children under the age of 13. Since no data is collected from any user, this policy applies uniformly regardless of age.</p>
-            </section>
-
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">10. Changes to This Policy</h3>
-              <p>We may update this Privacy Policy from time to time. Any changes will be reflected within the app with an updated "Effective Date" at the top of this document. Continued use of BunkCalc after changes constitutes acceptance of the revised policy.</p>
             </section>
           </>
         ) : (
           <>
-            <p className="text-slate-500 dark:text-slate-400 text-xs italic">Effective Date: August 29, 2026 &bull; Version {APP_VERSION_NAME}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs italic">
+              Effective Date: September 9, 2026 &bull; Version {APP_VERSION_NAME}
+            </p>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">1. Acceptance of Terms</h3>
-              <p>By using BunkCalc ("the App") on the web (https://bunk-calc-web.vercel.app/) or on your device, you agree to be bound by these Terms of Service developed by <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">PinecoXZ</a>. If you do not agree to these Terms, you must not use the App.</p>
+              <p>
+                By using BunkCalc (&quot;the App&quot;) developed by{' '}
+                <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">
+                  PinecoXZ
+                </a>, you agree to be bound by these Terms of Service. If you do not agree to these Terms, you must not use the App.
+              </p>
             </section>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Description of Service</h3>
-              <p>BunkCalc is a personal attendance management tool designed for university and college students. The App allows users to:</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Track daily class attendance across multiple subjects with 1-tap quick marking and batch "Mark All Present"</li>
-                <li>Calculate safe bunk budgets based on semester-forward calculations and custom target thresholds</li>
-                <li>Secure the application with on-device Biometric Fingerprint / Face ID and 4-digit PIN authentication</li>
-                <li>Mark lab sessions (2-hour timetable blocks) and manage cancelled class pool adjustments</li>
-                <li>Receive smart local notifications for upcoming classes and attendance reminders</li>
-                <li>View weekly 7-day bunk strategies, semester-end projections, recovery mode guidance, and attendance analytics</li>
-                <li>Share and import class timetables via compact cloud codes or camera QR scanning</li>
-                <li>Export, backup, and restore attendance data locally via JSON, CSV spreadsheets, and PDF reports</li>
-              </ul>
-              <p className="mt-2">The App operates entirely offline with local-only data storage. No account creation, registration, or internet connection is required for core functionality.</p>
+              <p>
+                BunkCalc is a personal attendance estimation and schedule tracking tool designed for university and college students. Features include 1-tap quick marking, Safe Bunk Budget computations, Biometric/PIN security, timetable QR sharing, custom subject thresholds, holiday managers, Meme Roast mode, and Semester Attendance Wrapped generation.
+              </p>
             </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">3. Eligibility</h3>
-              <p>BunkCalc is intended for use by individuals aged 17 and above, primarily enrolled students at recognised educational institutions. By using the App, you represent that you meet this age requirement.</p>
-            </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">4. Accuracy of Calculations</h3>
-              <p>BunkCalc performs attendance calculations based on the data you manually input, including subject details, class schedules, and daily attendance records. While we endeavour to ensure mathematical accuracy in all computations (attendance percentage, safe bunk budget, semester projections, and threshold alerts), the App is provided as an <span className="font-bold text-slate-900 dark:text-white">assistive tool only</span>.</p>
-              <p className="mt-2">You acknowledge and agree that:</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>The accuracy of results depends entirely on the accuracy of the data you provide</li>
-                <li>BunkCalc does not sync with, verify against, or replace your institution's official attendance management system (e.g., SAP, ERP portals)</li>
-                <li>Discrepancies may arise due to institutional policies including retroactive attendance corrections, extra classes, or administrative overrides</li>
-                <li>You are solely responsible for cross-verifying your attendance with your institution's official records before making any academic decisions</li>
+
+            <section className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+              <h3 className="text-red-600 dark:text-red-400 font-bold text-lg mb-2">
+                3. Critical Academic Responsibility &amp; Debarment Disclaimer
+              </h3>
+              <p className="font-bold text-slate-900 dark:text-white text-xs uppercase mb-2">
+                BUNKCALC IS NOT AN OFFICIAL UNIVERSITY REGISTRAR OR ERP PORTAL.
+              </p>
+              <ul className="list-disc ml-5 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                <li>
+                  You, as a student, are solely and individually responsible for fulfilling all statutory attendance requirements mandated by your university, college, UGC, or AICTE (including 75% or 85% cutoffs).
+                </li>
+                <li>
+                  BunkCalc computes mathematical estimates based strictly on manual user inputs. Discrepancies may arise due to professor overrides, unnotified extra classes, administrative corrections, or official portal calculation rules.
+                </li>
+                <li>
+                  In no event shall BunkCalc or its developer be liable for any academic penalties, examination debarments, loss of hall tickets, grade reductions, or disciplinary hearings. Always cross-verify your official college ERP before deciding to skip classes.
+                </li>
               </ul>
+            </section>
+
+            <section className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4">
+              <h3 className="text-purple-600 dark:text-purple-400 font-bold text-base mb-1">
+                4. Satirical Content &amp; Meme Roasts Disclaimer
+              </h3>
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                The &quot;Meme Roast Mode&quot;, student tier badges (&quot;Academic Weapon&quot;, &quot;Debarred Final Boss&quot;), and humorous notifications are satirical student humor designed for motivation and entertainment. They do not constitute actual academic warnings, institutional sanctions, or real-world disciplinary notices. All characterizations refer strictly and generically to &quot;the professor&quot; with zero reference to any specific individual faculty member.
+              </p>
             </section>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">5. Disclaimer of Warranties</h3>
-              <p>THE APP IS PROVIDED ON AN <span className="font-bold text-slate-900 dark:text-white">"AS IS" AND "AS AVAILABLE"</span> BASIS WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
-              <p className="mt-2">We do not warrant that the App will be uninterrupted, error-free, or free of harmful components. We do not guarantee that calculation results will always be accurate or complete.</p>
+              <p className="uppercase text-xs font-mono font-bold">
+                THE APP IS PROVIDED ON AN &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; BASIS WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WE DO NOT WARRANT THAT CALCULATIONS WILL BE ERROR-FREE OR ACCREDITED BY ANY INSTITUTION.
+              </p>
             </section>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">6. Limitation of Liability</h3>
-              <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL BUNKCALC, ITS DEVELOPERS, CONTRIBUTORS, OR AFFILIATES BE LIABLE FOR ANY:</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Academic penalties, debarment, detention, or loss of examination eligibility</li>
-                <li>Loss of credits, grades, scholarships, or academic standing</li>
-                <li>Incorrect attendance calculations arising from erroneous user input</li>
-                <li>Data loss resulting from device failure, app uninstallation, or failure to create backups</li>
-                <li>Any indirect, incidental, special, consequential, or punitive damages</li>
-              </ul>
-              <p className="mt-2">Your use of BunkCalc and any reliance on its calculations is entirely at your own risk.</p>
+              <p>
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BUNKCALC OR ITS DEVELOPER BE LIABLE FOR ANY ACADEMIC PENALTIES, DEBARMENT, LOSS OF CREDITS, DATA LOSS RESULTING FROM DEVICE RECOVERY ISSUES, OR ANY CONSEQUENTIAL DAMAGES. YOUR USE OF BUNKCALC IS ENTIRELY AT YOUR OWN RISK.
+              </p>
             </section>
             
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">7. User Responsibilities</h3>
-              <p>As a user of BunkCalc, you agree to:</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Provide accurate subject schedules, class timings, and attendance data</li>
-                <li>Regularly back up your data using the built-in Backup feature if you wish to preserve it</li>
-                <li>Not rely solely on BunkCalc for critical academic decisions without cross-referencing official records</li>
-                <li>Use the App in compliance with your institution's academic integrity policies</li>
-                <li>Not reverse-engineer, decompile, disassemble, or attempt to extract the source code of the App</li>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Input accurate schedules and attendance records for dependable calculations.</li>
+                <li>Regularly export JSON backups if you wish to preserve your semester journal across phone resets.</li>
+                <li>Cross-verify attendance with your college&apos;s official portal before making academic decisions.</li>
+                <li>Use the app in compliance with institutional honor codes.</li>
               </ul>
             </section>
             
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">8. Data Ownership & Portability</h3>
-              <p>You own all data you enter into BunkCalc. Since the App stores data locally on your device, you have complete control over your information. You may export your data at any time using the Backup feature and delete it permanently using the Reset function. We do not retain, access, or have the ability to retrieve any of your data.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">8. Intellectual Property</h3>
+              <p>
+                The BunkCalc name, logo, iconography, UI layouts, and brand assets are the intellectual property of BunkCalc and its creator PinecoXZ.
+              </p>
             </section>
             
             <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">9. Intellectual Property</h3>
-              <p>The BunkCalc name, logo, user interface design, iconography, and all associated visual and textual content are the intellectual property of BunkCalc and its creators. You may not reproduce, distribute, modify, or create derivative works based on the App's branding or design without prior written consent.</p>
-            </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">10. Termination</h3>
-              <p>You may stop using BunkCalc at any time by uninstalling the App. We reserve the right to discontinue, modify, or update the App at any time without prior notice. Upon uninstallation, all locally stored data will be permanently deleted by the operating system.</p>
-            </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">11. Governing Law & Jurisdiction</h3>
-              <p>These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts located in Bhubaneswar, Odisha, India.</p>
-            </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">12. Modifications to Terms</h3>
-              <p>We reserve the right to update or modify these Terms at any time. Changes will take effect immediately upon being published within the App with an updated "Effective Date". Your continued use of BunkCalc after any modifications constitutes your acceptance of the revised Terms.</p>
-            </section>
-            
-            <section>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">13. Severability</h3>
-              <p>If any provision of these Terms is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, the remaining provisions shall continue in full force and effect.</p>
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">9. Governing Law</h3>
+              <p>
+                These Terms shall be governed by and construed in accordance with the laws of India, subject to the exclusive jurisdiction of the courts in Bhubaneswar, Odisha, India.
+              </p>
             </section>
           </>
         )}
-        <div className="pt-10 pb-10 text-center text-slate-400 dark:text-slate-500 text-[10px]">
-          Last Updated: August 29, 2026 &bull; BunkCalc v{APP_VERSION_NAME} &bull; <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">PinecoXZ</a>
+        <div className="pt-8 pb-6 text-center text-slate-400 dark:text-slate-500 text-xs font-mono">
+          Last Updated: September 9, 2026 &bull; BunkCalc v{APP_VERSION_NAME} &bull;{' '}
+          <a href="https://github.com/PinecoXZ" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+            PinecoXZ
+          </a>
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ interface Props {
 }
 
 const THEME_OPTIONS: Array<{ id: ShareCardTheme; label: string; description: string }> = [
+  { id: 'meme', label: 'Wrapped 💀', description: 'Viral reality check & student rank tier' },
   { id: 'neon', label: 'Neon Cyber', description: 'Vibrant gradients & glowing telemetry' },
   { id: 'oled', label: 'OLED Dark', description: 'Deep #000000 black & high contrast' },
   { id: 'academic', label: 'Academic', description: 'Formal university report card' },
@@ -18,7 +19,7 @@ const THEME_OPTIONS: Array<{ id: ShareCardTheme; label: string; description: str
 ];
 
 export const ShareModal: React.FC<Props> = ({ isOpen, onClose, subjects, records }) => {
-  const [selectedTheme, setSelectedTheme] = useState<ShareCardTheme>('neon');
+  const [selectedTheme, setSelectedTheme] = useState<ShareCardTheme>('meme');
   const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -78,7 +79,7 @@ export const ShareModal: React.FC<Props> = ({ isOpen, onClose, subjects, records
         </div>
 
         {/* Theme Selector Tabs */}
-        <div className="grid grid-cols-4 gap-1.5 p-3 bg-slate-950/40 border-b border-slate-800">
+        <div className="grid grid-cols-5 gap-1 p-2.5 bg-slate-950/40 border-b border-slate-800">
           {THEME_OPTIONS.map((theme) => {
             const isSelected = selectedTheme === theme.id;
             return (
@@ -91,7 +92,7 @@ export const ShareModal: React.FC<Props> = ({ isOpen, onClose, subjects, records
                     : 'bg-slate-800/60 text-slate-400 hover:text-white font-bold'
                 }`}
               >
-                <p className="text-[11px] uppercase tracking-wider">{theme.label}</p>
+                <p className="text-[10px] uppercase tracking-wider truncate">{theme.label}</p>
               </button>
             );
           })}

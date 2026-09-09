@@ -6,6 +6,7 @@ import { OledThemeCard } from './share/OledThemeCard';
 import { AcademicThemeCard } from './share/AcademicThemeCard';
 import { TerminalThemeCard } from './share/TerminalThemeCard';
 import { NeonThemeCard } from './share/NeonThemeCard';
+import { MemeThemeCard } from './share/MemeThemeCard';
 
 interface Props {
   subjects: Subject[];
@@ -54,6 +55,8 @@ export const ShareCard: React.FC<Props> = ({ subjects, records, theme = 'neon' }
       return <AcademicThemeCard {...themeProps} />;
     case 'terminal':
       return <TerminalThemeCard {...themeProps} />;
+    case 'meme':
+      return <MemeThemeCard {...themeProps} />;
     case 'neon':
     default:
       return <NeonThemeCard {...themeProps} />;

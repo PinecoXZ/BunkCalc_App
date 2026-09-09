@@ -117,14 +117,18 @@ export const scheduleDailyClassReminders = async (
         const classDate = new Date(targetDate);
         classDate.setHours(hours, minutes, 0, 0);
 
+        const isMeme = settings.toneMode === 'meme';
+
         // Pre-class reminder
         if (settings.preClassReminder !== false) {
           const triggerDate = new Date(classDate.getTime() - settings.reminderMinutesBefore * 60000);
 
           if (triggerDate.getTime() > now.getTime()) {
             notifications.push({
-              title: 'Upcoming Class',
-              body: `${subject.name} starts in ${settings.reminderMinutesBefore} minutes.`,
+              title: isMeme ? 'Class Alert 🫡' : 'Upcoming Class',
+              body: isMeme
+                ? `${subject.name} starts in ${settings.reminderMinutesBefore}m. Time to convince yourself you'll pay attention today 🫡`
+                : `${subject.name} starts in ${settings.reminderMinutesBefore} minutes.`,
               id: getReminderId(NOTIF_ID_DAILY_BASE, dayOffset, subject.id, index),
               schedule: { at: triggerDate },
               extra: { subjectId: subject.id, type: 'pre_class' },
@@ -139,8 +143,10 @@ export const scheduleDailyClassReminders = async (
           const postClassDate = new Date(classDate.getTime() + (classDurationMinutes + postClassDelayMinutes) * 60000);
           if (postClassDate.getTime() > now.getTime()) {
             notifications.push({
-              title: 'Mark Attendance',
-              body: `Did you attend ${subject.name} today? Mark your attendance now!`,
+              title: isMeme ? 'Roll Call Reality Check 🍟' : 'Mark Attendance',
+              body: isMeme
+                ? `Did you actually attend ${subject.name} today, or are you marking present from the canteen? 🍟`
+                : `Did you attend ${subject.name} today? Mark your attendance now!`,
               id: getReminderId(NOTIF_ID_POST_CLASS_BASE, dayOffset, subject.id, index),
               schedule: { at: postClassDate },
               extra: { subjectId: subject.id, type: 'post_class' },
@@ -209,13 +215,17 @@ export const handleAttendanceAlerts = async (
   const threshold = (subject.threshold ?? settings.globalThreshold) * 100;
   const subjectHash = getSubjectHash(subject.id);
 
+  const isMeme = settings.toneMode === 'meme';
+
   // Threshold Alert: Just fell below threshold
   if (oldStats.attendancePct >= threshold && newStats.attendancePct < threshold) {
     await LocalNotifications.schedule({
       notifications: [
         {
-          title: 'Attendance Shortage Warning',
-          body: `Warning: Your attendance in ${subject.name} has fallen below ${Math.round(threshold)}%.`,
+          title: isMeme ? 'Danger Zone: Attendance Drop 💀' : 'Attendance Shortage Warning',
+          body: isMeme
+            ? `${subject.name} fell below ${Math.round(threshold)}%. The professor is currently drawing a red circle around your roll number 💀`
+            : `Warning: Your attendance in ${subject.name} has fallen below ${Math.round(threshold)}%.`,
           id: NOTIF_ID_THRESHOLD_BASE + subjectHash,
           schedule: { at: new Date(Date.now() + 1000) }, // Immediate
           smallIcon: 'ic_launcher',
@@ -227,7 +237,7 @@ export const handleAttendanceAlerts = async (
 
   // Bunk Budget Alert: Bunk budget dropped to 3 or fewer (or negative)
   if (oldStats.bunkBudget > 3 && newStats.bunkBudget <= 3) {
-    // Schedule for next morning 8AM per TRD Â§5
+    // Schedule for next morning 8AM per TRD §5
     const tomorrow8AM = new Date();
     tomorrow8AM.setDate(tomorrow8AM.getDate() + 1);
     tomorrow8AM.setHours(8, 0, 0, 0);
@@ -236,8 +246,10 @@ export const handleAttendanceAlerts = async (
     await LocalNotifications.schedule({
       notifications: [
         {
-          title: 'Low Bunk Budget Warning',
-          body: `${subject.name}: Only ${Math.max(0, newStats.bunkBudget)} bunks left before falling below threshold.`,
+          title: isMeme ? 'Bunk Budget Critical 🚨' : 'Low Bunk Budget Warning',
+          body: isMeme
+            ? `${subject.name}: Only ${Math.max(0, newStats.bunkBudget)} bunks left. You are playing Russian roulette with your semester 💀`
+            : `${subject.name}: Only ${Math.max(0, newStats.bunkBudget)} bunks left before falling below threshold.`,
           id: NOTIF_ID_STATUS_BASE + subjectHash,
           schedule: { at: tomorrow8AM },
           smallIcon: 'ic_launcher',
@@ -275,13 +287,17 @@ export const scheduleSundaySummary = async (
     nextSunday.setDate(nextSunday.getDate() + 7);
   }
 
+  const isMeme = settings.toneMode === 'meme';
+
   await LocalNotifications.cancel({ notifications: [{ id: NOTIF_ID_SUNDAY_SUMMARY }] });
 
   await LocalNotifications.schedule({
     notifications: [
       {
-        title: 'Weekly Attendance Summary',
-        body: `${atRiskSubjects.length} subject(s) are low on bunk budget. Review your schedule for the week.`,
+        title: isMeme ? 'Sunday Reality Check 💀' : 'Weekly Attendance Summary',
+        body: isMeme
+          ? `${atRiskSubjects.length} subject(s) on life support. Plan your week before the professor plans your detention 💀`
+          : `${atRiskSubjects.length} subject(s) are low on bunk budget. Review your schedule for the week.`,
         id: NOTIF_ID_SUNDAY_SUMMARY,
         schedule: { at: nextSunday },
         smallIcon: 'ic_launcher',
@@ -319,6 +335,7 @@ export const scheduleDailyScheduleDigest = async (
 
   const [digestHour, digestMin] = (settings.dailyDigestTime || '07:30').split(':').map(Number);
   const now = new Date();
+  const isMeme = settings.toneMode === 'meme';
 
   // Schedule for each of the next 7 days
   const digestNotifs: LocalNotificationSchema[] = [];
@@ -346,8 +363,12 @@ export const scheduleDailyScheduleDigest = async (
       });
 
       digestNotifs.push({
-        title: `Today's Schedule: ${classesToday.length} Classes`,
-        body: `${classesToday.map(c => c.name).join(', ')} â€¢ ${totalSafeBunks} safe bunks remaining.`,
+        title: isMeme 
+          ? `Today's Roll Call: ${classesToday.length} Classes ☕`
+          : `Today's Schedule: ${classesToday.length} Classes`,
+        body: isMeme
+          ? `${classesToday.map(c => c.name).join(', ')} • ${totalSafeBunks} safe bunks left. Stay awake today or say goodbye to your 75% ☕`
+          : `${classesToday.map(c => c.name).join(', ')} • ${totalSafeBunks} safe bunks remaining.`,
         id: NOTIF_ID_DAILY_DIGEST + offset,
         schedule: { at: notifDate },
         smallIcon: 'ic_launcher',

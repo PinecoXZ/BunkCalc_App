@@ -33,6 +33,7 @@ const defaultSettings: AppSettings = {
   hapticsEnabled: true,
   theme: 'dark',
   themeAccent: 'blue',
+  toneMode: 'standard',
   holidays: [],
 };
 

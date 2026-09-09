@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 
+import { useSettings } from '../store/useSettings';
+
 interface Props {
   type: 'present' | 'absent' | null;
   onDone: () => void;
@@ -25,7 +27,31 @@ const STATIC_PARTICLES: Particle[] = Array.from({ length: 45 }).map((_, i) => ({
   rotation: (i * 73) % 360,
 }));
 
+const PRESENT_MEMES = [
+  'Academic Weapon 🗿',
+  'The professor noticed you exist ✨',
+  'GigaChad Behavior 🗿',
+  '75% Safe Haven Secured 🛡️',
+  'Attendance Locked In 🔒',
+];
+
+const ABSENT_MEMES = [
+  'Class sacrificed for a good cause 💀',
+  'The professor noticed an empty chair 📉',
+  'Living on the edge 🔥',
+  'May the 75% gods protect you 🙏',
+  'Attendance down, sleep up 😴',
+];
+
 const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
+  const toneMode = useSettings((state) => state.settings.toneMode);
+
+  const memeText = React.useMemo(() => {
+    if (toneMode !== 'meme' || !type) return null;
+    const pool = type === 'present' ? PRESENT_MEMES : ABSENT_MEMES;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, [type, toneMode]);
+
   useEffect(() => {
     if (!type) return;
 
@@ -65,7 +91,7 @@ const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
-            <span>Class Attended</span>
+            <span>{memeText || 'Class Attended'}</span>
           </div>
         </>
       )}
@@ -76,7 +102,7 @@ const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span>Absent Logged</span>
+            <span>{memeText || 'Absent Logged'}</span>
           </div>
         </div>
       )}

@@ -49,7 +49,7 @@ export interface Holiday {
 export type ThemeMode = 'light' | 'dark' | 'oled' | 'system';
 export type ThemeAccent = 'blue' | 'purple' | 'emerald' | 'amber' | 'rose';
 
-export type ShareCardTheme = 'neon' | 'oled' | 'academic' | 'terminal';
+export type ShareCardTheme = 'neon' | 'oled' | 'academic' | 'terminal' | 'meme';
 
 export interface WidgetClassItem {
   id: string;
@@ -96,6 +96,7 @@ export interface AppSettings {
   hapticsEnabled: boolean;
   theme: ThemeMode;
   themeAccent?: ThemeAccent;
+  toneMode?: 'standard' | 'meme';
   holidays?: Holiday[];
 }
 

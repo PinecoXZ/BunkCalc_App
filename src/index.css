@@ -2,26 +2,52 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* OLED Pitch Black Midnight Mode */
-html.oled,
-html.oled body,
-html.oled #root,
-html.oled .dark\:bg-slate-950,
-html.oled .dark\:bg-slate-900 {
-  background-color: #000000 !important;
+/* ==========================================================================
+   NEUMORPHISM (SOFT UI 2.0) DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+  --neu-bg: #e8ecf4;
+  --neu-surface: #e8ecf4;
+  --neu-surface-inset: #e1e7f0;
+  --neu-border: rgba(255, 255, 255, 0.65);
+  --neu-shadow-dark: rgba(166, 180, 200, 0.72);
+  --neu-shadow-light: rgba(255, 255, 255, 0.95);
+  --neu-inset-dark: rgba(166, 180, 200, 0.6);
+  --neu-inset-light: rgba(255, 255, 255, 0.9);
+
+  /* Default Blue Accent */
+  --neu-accent: #2563eb;
+  --neu-accent-light: #3b82f6;
+  --neu-accent-glow: rgba(37, 99, 235, 0.35);
+  --neu-accent-focus: rgba(59, 130, 246, 0.2);
 }
 
-html.oled .dark\:border-slate-800 {
-  border-color: #1c1c1e !important;
-}
-
-html.oled .dark\:bg-slate-900\/50,
-html.oled .dark\:bg-slate-800\/50,
-html.oled .dark\:bg-slate-800 {
-  background-color: #0d0d0d !important;
+.dark {
+  --neu-bg: #181c24;
+  --neu-surface: #181c24;
+  --neu-surface-inset: #13161d;
+  --neu-border: rgba(255, 255, 255, 0.05);
+  --neu-shadow-dark: rgba(0, 0, 0, 0.68);
+  --neu-shadow-light: rgba(255, 255, 255, 0.038);
+  --neu-inset-dark: rgba(0, 0, 0, 0.75);
+  --neu-inset-light: rgba(255, 255, 255, 0.035);
 }
 
 /* Dynamic Accent Themes */
+html.accent-blue {
+  --neu-accent: #2563eb;
+  --neu-accent-light: #3b82f6;
+  --neu-accent-glow: rgba(37, 99, 235, 0.35);
+  --neu-accent-focus: rgba(59, 130, 246, 0.2);
+}
+
+html.accent-purple {
+  --neu-accent: #9333ea;
+  --neu-accent-light: #a855f7;
+  --neu-accent-glow: rgba(147, 51, 234, 0.35);
+  --neu-accent-focus: rgba(168, 85, 247, 0.2);
+}
 html.accent-purple .text-blue-500,
 html.accent-purple .text-blue-600 {
   color: #a855f7 !important;
@@ -34,6 +60,12 @@ html.accent-purple .border-blue-500 {
   border-color: #a855f7 !important;
 }
 
+html.accent-emerald {
+  --neu-accent: #059669;
+  --neu-accent-light: #10b981;
+  --neu-accent-glow: rgba(5, 150, 105, 0.35);
+  --neu-accent-focus: rgba(16, 185, 129, 0.2);
+}
 html.accent-emerald .text-blue-500,
 html.accent-emerald .text-blue-600 {
   color: #10b981 !important;
@@ -46,6 +78,12 @@ html.accent-emerald .border-blue-500 {
   border-color: #10b981 !important;
 }
 
+html.accent-rose {
+  --neu-accent: #e11d48;
+  --neu-accent-light: #f43f5e;
+  --neu-accent-glow: rgba(225, 29, 72, 0.35);
+  --neu-accent-focus: rgba(244, 63, 94, 0.2);
+}
 html.accent-rose .text-blue-500,
 html.accent-rose .text-blue-600 {
   color: #f43f5e !important;
@@ -58,6 +96,12 @@ html.accent-rose .border-blue-500 {
   border-color: #f43f5e !important;
 }
 
+html.accent-amber {
+  --neu-accent: #d97706;
+  --neu-accent-light: #f59e0b;
+  --neu-accent-glow: rgba(217, 119, 6, 0.35);
+  --neu-accent-focus: rgba(245, 158, 11, 0.2);
+}
 html.accent-amber .text-blue-500,
 html.accent-amber .text-blue-600 {
   color: #f59e0b !important;
@@ -70,3 +114,150 @@ html.accent-amber .border-blue-500 {
   border-color: #f59e0b !important;
 }
 
+/* Base Body Styles */
+body {
+  background-color: var(--neu-bg);
+  color: #1e293b;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dark body {
+  color: #f1f5f9;
+}
+
+/* ==========================================================================
+   NEUMORPHIC UTILITIES
+   ========================================================================== */
+
+/* Raised Surface / Card */
+.neu-card,
+.neu-flat {
+  background-color: var(--neu-surface);
+  box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+}
+
+/* Raised Small / Badges / Subtle Items */
+.neu-flat-sm {
+  background-color: var(--neu-surface);
+  box-shadow: 3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+}
+
+/* Raised Floating / High Elevation */
+.neu-float {
+  background-color: var(--neu-surface);
+  box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+}
+
+/* Sunken / Inset / Wells / Pressed */
+.neu-inset,
+.neu-pressed {
+  background-color: var(--neu-surface-inset);
+  box-shadow: inset 3px 3px 7px var(--neu-inset-dark), inset -3px -3px 7px var(--neu-inset-light);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.dark .neu-inset,
+.dark .neu-pressed {
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+/* Tactile Interactive Button */
+.neu-btn {
+  background-color: var(--neu-surface);
+  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.neu-btn:active,
+.neu-btn.active {
+  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light);
+  transform: scale(0.98);
+}
+
+/* Accent Tactile Button */
+.neu-btn-primary {
+  background: linear-gradient(135deg, var(--neu-accent-light) 0%, var(--neu-accent) 100%);
+  color: #ffffff;
+  box-shadow: 5px 5px 12px var(--neu-accent-glow), -3px -3px 8px var(--neu-shadow-light);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.neu-btn-primary:active {
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.4), inset -2px -2px 4px rgba(255, 255, 255, 0.2);
+  transform: scale(0.98);
+}
+
+/* Tactile Present Button (Green) */
+.neu-btn-present {
+  background: var(--neu-surface);
+  color: #10b981;
+  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.neu-btn-present:active {
+  background: rgba(16, 185, 129, 0.12);
+  box-shadow: inset 2px 2px 5px rgba(16, 185, 129, 0.3), inset -2px -2px 5px var(--neu-inset-light);
+  transform: scale(0.97);
+}
+
+/* Tactile Absent Button (Rose) */
+.neu-btn-absent {
+  background: var(--neu-surface);
+  color: #f43f5e;
+  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.neu-btn-absent:active {
+  background: rgba(244, 63, 94, 0.12);
+  box-shadow: inset 2px 2px 5px rgba(244, 63, 94, 0.3), inset -2px -2px 5px var(--neu-inset-light);
+  transform: scale(0.97);
+}
+
+/* Neumorphic Input Well */
+.neu-input {
+  background-color: var(--neu-surface-inset);
+  box-shadow: inset 3px 3px 7px var(--neu-inset-dark), inset -3px -3px 7px var(--neu-inset-light);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.neu-input:focus {
+  border-color: var(--neu-accent);
+  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light), 0 0 0 3px var(--neu-accent-focus);
+}
+
+/* Neumorphic Filter Chip */
+.neu-chip {
+  background-color: var(--neu-surface);
+  box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);
+  border: 1px solid var(--neu-border);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.neu-chip:active {
+  transform: scale(0.96);
+}
+.neu-chip-active {
+  background-color: var(--neu-surface-inset);
+  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light);
+  border: 1px solid var(--neu-accent);
+  color: var(--neu-accent);
+}
+
+/* Neumorphic Floating Bottom Dock */
+.neu-dock {
+  background-color: var(--neu-surface);
+  box-shadow: 0 -4px 20px var(--neu-shadow-dark), 0 -1px 4px var(--neu-shadow-light);
+  border-top: 1px solid var(--neu-border);
+}

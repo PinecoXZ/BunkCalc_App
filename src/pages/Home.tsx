@@ -13,7 +13,6 @@ import type { Subject } from '../lib/types';
 import SemesterProgress from '../components/SemesterProgress';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { WeeklyStrategyModal } from '../components/WeeklyStrategyModal';
-import { TimetableShareModal } from '../components/TimetableShareModal';
 import { registerBackHandler } from '../lib/backHandler';
 
 // Lazy loaded heavy components
@@ -35,7 +34,6 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'timetable'>('dashboard');
   const [showWeeklyStrategy, setShowWeeklyStrategy] = useState(false);
-  const [showTimetableShare, setShowTimetableShare] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'danger' | 'safe' | 'labs'>('all');
   const [sortBy, setSortBy] = useState<'risk' | 'attendance_asc' | 'attendance_desc' | 'name'>('risk');
@@ -43,7 +41,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
 
   // Hardware Back Button listener for Home modals and view mode
   React.useEffect(() => {
-    if (modalMode === 'none' && !showWeeklyStrategy && !showTimetableShare && viewMode === 'dashboard') {
+    if (modalMode === 'none' && !showWeeklyStrategy && viewMode === 'dashboard') {
       return;
     }
 
@@ -57,10 +55,6 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
         setShowWeeklyStrategy(false);
         return true;
       }
-      if (showTimetableShare) {
-        setShowTimetableShare(false);
-        return true;
-      }
       if (viewMode === 'timetable') {
         setViewMode('dashboard');
         return true;
@@ -69,7 +63,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
     });
 
     return unregister;
-  }, [modalMode, showWeeklyStrategy, showTimetableShare, viewMode]);
+  }, [modalMode, showWeeklyStrategy, viewMode]);
 
   // Update clock every minute
   React.useEffect(() => {
@@ -248,14 +242,14 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-4 pb-24">
+    <div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-100 p-4 pb-28">
       <div className="-mx-4 -mt-4 mb-4">
         <UpdateBanner />
       </div>
       <header className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-blue-500 italic uppercase">BunkCalc</h1>
-          <div className="text-slate-500 dark:text-slate-400 text-xs font-bold tracking-widest flex items-center gap-1">
+          <h1 className="text-3xl font-black text-blue-500 italic uppercase tracking-tight">BunkCalc</h1>
+          <div className="text-slate-500 dark:text-slate-400 text-xs font-black tracking-widest flex items-center gap-1">
             DASHBOARD
             <HelpTooltip
               title="Dashboard Overview"
@@ -263,10 +257,10 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             />
           </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2.5 items-center">
           {streak >= 2 && (
-            <div className="bg-orange-500/10 border border-orange-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="neu-flat-sm px-3 py-1.5 rounded-2xl flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
               </svg>
@@ -274,28 +268,18 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             </div>
           )}
           <button
-            onClick={() => setShowTimetableShare(true)}
-            className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg active:scale-90 transition-transform text-blue-500"
-            aria-label="Share or Import Timetable"
-            title="Share or Import Timetable"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-          </button>
-          <button
             onClick={onOpenCalendar}
-            className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg active:scale-90 transition-transform"
+            className="neu-btn w-10 h-10 rounded-2xl flex items-center justify-center text-blue-500"
             aria-label="Open Calendar"
           >
-            <ThemedIcon name="calendar" size={22} className="text-blue-500" />
+            <ThemedIcon name="calendar" size={20} className="text-blue-500" />
           </button>
           <button
             onClick={() => setModalMode('add')}
-            className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg active:scale-90 transition-transform"
+            className="neu-btn w-10 h-10 rounded-2xl flex items-center justify-center text-emerald-500"
             aria-label="Add Subject"
           >
-            <ThemedIcon name="plus" size={22} className="text-emerald-500" />
+            <ThemedIcon name="plus" size={20} className="text-emerald-500" />
           </button>
         </div>
       </header>
@@ -306,21 +290,21 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       {subjects.length > 0 && (
         <div
           onClick={() => setShowWeeklyStrategy(true)}
-          className="mb-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-violet-600/10 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-violet-900/20 border border-blue-500/20 dark:border-blue-500/30 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:border-blue-500/40 active:scale-[0.99] transition-all shadow-sm group"
+          className="mb-6 neu-card rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/15 dark:bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-500">
+          <div className="flex items-center gap-3.5">
+            <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-blue-500">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Weekly Bunk Strategy</span>
-                <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">Briefing</span>
+                <span className="neu-flat-sm bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Briefing</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Smart plan for next 7 days â€¢ Safe & risky subjects
+                Smart plan for next 7 days • Safe &amp; risky subjects
               </p>
             </div>
           </div>
@@ -334,23 +318,23 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       )}
 
       {/* View Toggle */}
-      <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-6 border border-slate-200 dark:border-slate-800">
+      <div className="neu-inset p-1.5 rounded-2xl mb-6 flex gap-1.5">
         <button
           onClick={() => setViewMode('dashboard')}
-          className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
             viewMode === 'dashboard'
-              ? 'bg-blue-600 text-white shadow-lg'
-              : 'text-slate-500 dark:text-slate-400'
+              ? 'neu-btn bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-black shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           Dashboard
         </button>
         <button
           onClick={() => setViewMode('timetable')}
-          className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
             viewMode === 'timetable'
-              ? 'bg-blue-600 text-white shadow-lg'
-              : 'text-slate-500 dark:text-slate-400'
+              ? 'neu-btn bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-black shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           Timetable
@@ -460,7 +444,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'risk' | 'attendance_asc' | 'attendance_desc' | 'name')}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1 outline-none border border-slate-200 dark:border-slate-700"
+                  className="neu-flat-sm text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
                 >
                   <option value="risk">Lowest Budget First (Riskiest)</option>
                   <option value="attendance_asc">Lowest Attendance %</option>
@@ -472,10 +456,10 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
 
             {/* Quick Search & Filter Bar */}
             {subjects.length > 2 && (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {/* Search Input */}
                 <div className="relative">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
@@ -483,12 +467,12 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Filter by subject, room (e.g. 302), faculty..."
-                    className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500 transition-colors"
+                    className="neu-input w-full pl-10 pr-9 py-2.5 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-1"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-1 cursor-pointer"
                     >
                       &times;
                     </button>
@@ -496,30 +480,35 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                 </div>
 
                 {/* Filter Chips */}
-                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                   {[
                     { id: 'all', label: 'All Subjects', count: filterCounts.all },
                     { id: 'danger', label: 'In Danger', count: filterCounts.danger },
                     { id: 'safe', label: 'Safe', count: filterCounts.safe },
                     { id: 'labs', label: 'Labs Only', count: filterCounts.labs }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setFilterType(tab.id as 'all' | 'danger' | 'safe' | 'labs')}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap transition-all ${
-                        filterType === tab.id
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                          : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>{tab.label}</span>
-                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full ${
-                        filterType === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                      }`}>
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
+                  ].map((tab) => {
+                    const isActive = filterType === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setFilterType(tab.id as 'all' | 'danger' | 'safe' | 'labs')}
+                        className={`px-3.5 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-150 ${
+                          isActive
+                            ? 'neu-chip-active font-black'
+                            : 'neu-chip text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                          isActive 
+                            ? 'bg-blue-600/20 text-blue-600 dark:text-blue-400' 
+                            : 'neu-inset text-slate-500'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -527,9 +516,9 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             {/* Subject Cards Grid */}
             <div className="grid gap-4">
               {filteredAndSortedSubjects.length === 0 ? (
-                <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="neu-card rounded-3xl p-8 text-center space-y-2">
+                  <div className="neu-inset w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -584,12 +573,6 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       <WeeklyStrategyModal
         isOpen={showWeeklyStrategy}
         onClose={() => setShowWeeklyStrategy(false)}
-      />
-
-      {/* Timetable Share / Import Modal */}
-      <TimetableShareModal
-        isOpen={showTimetableShare}
-        onClose={() => setShowTimetableShare(false)}
       />
     </div>
   );

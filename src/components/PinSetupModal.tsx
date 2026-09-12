@@ -98,16 +98,16 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-xs shadow-2xl flex flex-col items-center">
+      <div className="neu-card rounded-3xl p-6 w-full max-w-xs flex flex-col items-center">
         {/* Header Icon */}
-        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-2xl neu-inset text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
 
-        <h3 className="text-base font-black text-slate-900 dark:text-white text-center">{getTitle()}</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-0.5 mb-5">{getSubtitle()}</p>
+        <h3 className="text-base font-black text-slate-900 dark:text-white text-center tracking-tight">{getTitle()}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-0.5 mb-5 font-medium">{getSubtitle()}</p>
 
         {/* 4 Dots Indicator */}
         <div className="flex gap-4 mb-4">
@@ -118,8 +118,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
                 key={idx}
                 className={`w-4 h-4 rounded-full transition-all duration-150 ${
                   isFilled
-                    ? 'bg-blue-600 dark:bg-blue-500 scale-110 shadow-md shadow-blue-500/30'
-                    : 'bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700'
+                    ? 'bg-blue-600 scale-110 shadow-md shadow-blue-500/40'
+                    : 'neu-inset opacity-70'
                 }`}
               />
             );
@@ -128,7 +128,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
         {/* Error message */}
         {errorMsg ? (
-          <p className="text-xs font-bold text-red-500 mb-3 animate-bounce">{errorMsg}</p>
+          <p className="text-xs font-bold text-rose-500 mb-3 animate-bounce">{errorMsg}</p>
         ) : (
           <div className="h-4 mb-3" />
         )}
@@ -141,7 +141,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
           bottomLeftButton={
             <button
               onClick={onClose}
-              className="h-12 rounded-2xl bg-slate-100/60 dark:bg-slate-800/40 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              className="neu-btn h-13 rounded-2xl text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
             >
               Cancel
             </button>

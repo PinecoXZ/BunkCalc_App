@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import type { AttendanceRecord } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
-import { handleAttendanceAlerts, scheduleDailyClassReminders } from '../lib/notifications';
-import { syncWidgetData } from '../lib/widgetData';
+import { handleAttendanceAlerts } from '../lib/notifications';
+import { toISODateStr } from '../lib/dateUtils';
+import { syncNotificationsAndWidgets } from './syncHelpers';
 import { useSubjects } from './useSubjects';
 import { useSettings } from './useSettings';
 
@@ -62,9 +63,8 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
         settings
       );
     }
-    // Re-sync scheduled class reminders to ensure already-marked classes are excluded
-    await scheduleDailyClassReminders(allSubjects, settings, newRecords);
-    await syncWidgetData(allSubjects, newRecords, settings);
+    // Re-sync scheduled class reminders and widgets to ensure marked classes are updated
+    await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
   },
   unmarkAttendance: async (id) => {
     let oldRecords: AttendanceRecord[] = [];
@@ -101,8 +101,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
         );
       }
     }
-    await scheduleDailyClassReminders(allSubjects, settings, newRecords);
-    await syncWidgetData(allSubjects, newRecords, settings);
+    await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
   },
   undoLastAction: async () => {
     const { lastAction } = get();
@@ -138,8 +137,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       await handleAttendanceAlerts(subject, oldRecords, newRecords, settings);
     }
 
-    await scheduleDailyClassReminders(allSubjects, settings, newRecords);
-    await syncWidgetData(allSubjects, newRecords, settings);
+    await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
   },
   clearLastAction: () => {
     set({ lastAction: null });
@@ -174,7 +172,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       const checkDate = new Date(now);
       checkDate.setDate(checkDate.getDate() - daysBack);
       const dayOfWeek = checkDate.getDay();
-      const dateStr = checkDate.toLocaleDateString('en-CA');
+      const dateStr = toISODateStr(checkDate);
 
       // Check if this date falls within a configured holiday
       const isHoliday = settings.holidays?.some(h => dateStr >= h.startDate && dateStr <= h.endDate);

@@ -22,13 +22,13 @@ export const UpdateBanner: React.FC = () => {
         <svg className="w-4 h-4 shrink-0 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
-        <span className="truncate">
+        <span className="truncate font-bold">
           Update available — BunkCalc v{latestVersion} is out
         </span>
       </div>
       <button
         onClick={handleDownload}
-        className="bg-slate-950 text-amber-400 hover:bg-slate-900 active:scale-95 px-3 py-1.5 rounded-lg font-bold text-xs tracking-wide uppercase transition-all shrink-0 cursor-pointer"
+        className="bg-slate-950 text-amber-300 hover:bg-slate-900 active:scale-95 px-3.5 py-1.5 rounded-xl font-black text-xs tracking-wider uppercase transition-all shrink-0 cursor-pointer shadow-sm"
       >
         Download
       </button>

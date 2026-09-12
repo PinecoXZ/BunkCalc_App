@@ -7,7 +7,6 @@ interface DataSettingsProps {
   archivedSemesters: ArchivedSemester[];
   deleteArchivedSemester: (id: string) => Promise<void>;
   onBack: () => void;
-  onOpenTimetableShare: () => void;
   onOpenArchiveModal: () => void;
   onShowModal: (modal: {
     isOpen: boolean;
@@ -25,7 +24,6 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
   archivedSemesters,
   deleteArchivedSemester,
   onBack,
-  onOpenTimetableShare,
   onOpenArchiveModal,
   onShowModal,
 }) => {
@@ -108,88 +106,77 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
         onBack={onBack}
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3.5">
         <button 
           onClick={exportAppState}
-          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm"
+          className="neu-btn p-4 rounded-2xl flex flex-col items-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          <span className="text-xs font-bold text-slate-900 dark:text-white">Backup</span>
+          <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          </div>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Backup</span>
         </button>
         
-        <label className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-center shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          <span className="text-xs font-bold text-slate-900 dark:text-white">Restore</span>
+        <label className="neu-btn p-4 rounded-2xl flex flex-col items-center gap-2 cursor-pointer text-center">
+          <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-emerald-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </div>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Restore</span>
           <input type="file" accept=".json" onChange={handleImport} className="hidden" />
         </label>
 
         <button 
           onClick={handleReset}
-          className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-red-500/20 transition-colors shadow-sm"
+          className="neu-btn p-4 rounded-2xl flex flex-col items-center gap-2 text-rose-500"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span className="text-xs font-bold text-red-500">Reset</span>
+          <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-rose-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <span className="text-xs font-bold text-rose-500">Reset</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3.5">
         <button 
           onClick={exportToCSV}
-          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm"
+          className="neu-btn p-4 rounded-2xl flex items-center gap-3 text-left"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span className="text-xs font-bold text-slate-900 dark:text-white">Export CSV</span>
+          <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-emerald-500 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Export CSV</span>
         </button>
         
         <button 
           onClick={exportToPDF}
-          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm"
+          className="neu-btn p-4 rounded-2xl flex items-center gap-3 text-left"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span className="text-xs font-bold text-slate-900 dark:text-white">Export PDF</span>
-        </button>
-      </div>
-
-      {/* Share / Import Class Timetable */}
-      <button 
-        onClick={onOpenTimetableShare}
-        className="w-full bg-blue-500/10 border border-blue-500/30 p-4 rounded-2xl flex items-center justify-between hover:bg-blue-500/20 active:scale-[0.99] transition-all"
-      >
-        <div className="flex items-center gap-3 text-left">
-          <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-500 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-rose-500 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <div>
-            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Class Timetable Share & Import</p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">Generate QR code for batch or import friends' schedule</p>
-          </div>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Export PDF</span>
+        </button>
+      </div>
 
       {/* Archive Semester Button */}
       <button 
         onClick={onOpenArchiveModal}
-        className="w-full bg-purple-500/10 border border-purple-500/30 p-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-500/20 transition-colors"
+        className="w-full neu-btn p-4 rounded-3xl flex items-center justify-center gap-3 text-purple-600 dark:text-purple-400"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
         </svg>
-        <span className="text-sm font-bold text-purple-500">Archive Current Semester</span>
+        <span className="text-sm font-bold">Archive Current Semester</span>
       </button>
 
       {/* Archived Semesters */}
@@ -197,7 +184,7 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
         <div>
           <button 
             onClick={() => setShowArchivedList(!showArchivedList)}
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex justify-between items-center"
+            className="w-full neu-card p-4.5 rounded-3xl flex justify-between items-center"
           >
             <div className="flex items-center gap-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,15 +197,15 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
             </svg>
           </button>
           {showArchivedList && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-3 space-y-2.5">
               {archivedSemesters.map(sem => (
-                <div key={sem.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex justify-between items-center">
+                <div key={sem.id} className="neu-flat-sm rounded-2xl p-4 flex justify-between items-center">
                   <div>
                     <p className="font-bold text-sm text-slate-900 dark:text-white">{sem.name}</p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                       {sem.subjects.length} subjects • {sem.records.length} records • {sem.overallPct.toFixed(1)}% overall
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">
                       Archived {new Date(sem.archivedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
@@ -237,7 +224,7 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
                         onCancel: () => {}
                       });
                     }}
-                    className="text-red-500 p-2"
+                    className="neu-btn text-rose-500 p-2.5 rounded-xl"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

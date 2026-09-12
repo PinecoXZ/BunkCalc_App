@@ -144,9 +144,7 @@ export const calculateWeekdayStats = (records: AttendanceRecord[]): WeekdayStat[
   }
 
   records.forEach((r) => {
-    const [y, m, d] = r.date.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    const day = date.getDay();
+    const day = parseLocalDate(r.date).getDay();
     const current = map.get(day)!;
     if (r.status === 'present') current.attended++;
     else if (r.status === 'absent') current.missed++;

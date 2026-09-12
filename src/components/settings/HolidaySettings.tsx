@@ -49,14 +49,14 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
         onBack={onBack}
       />
 
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4">
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+      <div className="neu-card rounded-3xl p-5 space-y-5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
           Add official college holidays or exam breaks. Dates inside these ranges are automatically excluded from your remaining class budget.
         </p>
 
-        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl space-y-3">
+        <div className="neu-inset p-4.5 rounded-2xl space-y-3.5">
           {editingHoliday && (
-            <div className="flex justify-between items-center bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 font-bold">
+            <div className="flex justify-between items-center bg-blue-500/15 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs text-blue-600 dark:text-blue-400 font-bold">
               <span className="flex items-center gap-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -65,26 +65,26 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
               </span>
               <button 
                 onClick={resetForm}
-                className="text-[10px] underline hover:text-blue-700 dark:hover:text-blue-300"
+                className="text-[10px] underline hover:text-blue-700 dark:hover:text-blue-300 font-semibold"
               >
                 Cancel
               </button>
             </div>
           )}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
               {editingHoliday ? 'Edit Break Name' : 'Break Name'}
             </label>
             <input 
               placeholder="e.g. Puja / Diwali Vacation" 
               value={holidayName}
               onChange={(e) => setHolidayName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+              className="w-full neu-input rounded-xl p-2.5 text-xs font-bold outline-none text-slate-900 dark:text-white"
             />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Start Date</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Start Date</label>
               <input 
                 type="date" 
                 value={holidayStart}
@@ -92,22 +92,22 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                   setHolidayStart(e.target.value);
                   if (!holidayEnd) setHolidayEnd(e.target.value);
                 }}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                className="w-full neu-input rounded-xl p-2.5 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">End Date</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">End Date</label>
               <input 
                 type="date" 
                 value={holidayEnd}
                 onChange={(e) => setHolidayEnd(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                className="w-full neu-input rounded-xl p-2.5 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
           </div>
           
           {editingHoliday ? (
-            <div className="flex gap-2">
+            <div className="flex gap-2.5 pt-1">
               <button 
                 disabled={!holidayName.trim() || !holidayStart || !holidayEnd}
                 onClick={() => {
@@ -121,13 +121,13 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                   });
                   resetForm();
                 }}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider disabled:opacity-50 transition-all shadow-md shadow-emerald-500/20"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50 transition-all shadow-md shadow-emerald-500/20"
               >
                 Save Changes
               </button>
               <button 
                 onClick={resetForm}
-                className="px-4 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors"
+                className="px-4 neu-btn text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold"
               >
                 Cancel
               </button>
@@ -146,15 +146,15 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                 });
                 resetForm();
               }}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider disabled:opacity-50 transition-all shadow-md shadow-blue-500/20"
+              className="w-full neu-btn-primary py-2.5 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50"
             >
               + Add Holiday Break
             </button>
           )}
 
           {/* Academic Calendar Presets & ICS Import */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 flex flex-col gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <div className="pt-3.5 border-t border-slate-200/60 dark:border-slate-800/80 flex flex-col gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Quick Calendar Presets & Import
             </span>
             <div className="flex gap-2">
@@ -183,15 +183,15 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                   e.target.value = "";
                 }}
                 defaultValue=""
-                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
+                className="flex-1 neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
               >
-                <option value="" disabled>Load Indian College Presets</option>
+                <option value="" disabled className="bg-slate-50 dark:bg-slate-900">Load Indian College Presets</option>
                 {HOLIDAY_PRESETS.map((p, idx) => (
-                  <option key={idx} value={idx}>{p.name}</option>
+                  <option key={idx} value={idx} className="bg-slate-50 dark:bg-slate-900">{p.name}</option>
                 ))}
               </select>
 
-              <label className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors">
+              <label className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -245,29 +245,29 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
         </div>
 
         {/* List of Configured Holidays */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {(!settings.holidays || settings.holidays.length === 0) ? (
-            <p className="text-center text-xs text-slate-400 dark:text-slate-600 italic py-2">No holidays configured.</p>
+            <p className="text-center text-xs text-slate-400 dark:text-slate-500 italic py-3">No holidays configured.</p>
           ) : (
             settings.holidays.map((h) => (
               <div 
                 key={h.id} 
-                className={`flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl border text-xs transition-all ${
+                className={`flex justify-between items-center neu-flat-sm p-3.5 rounded-2xl text-xs transition-all ${
                   editingHoliday?.id === h.id 
-                    ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' 
-                    : 'border-slate-200 dark:border-slate-700'
+                    ? 'ring-2 ring-blue-500/50 neu-inset' 
+                    : ''
                 }`}
               >
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     {h.name}
                     {editingHoliday?.id === h.id && (
-                      <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.2 rounded-full font-bold">Editing</span>
+                      <span className="text-[9px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">Editing</span>
                     )}
                   </p>
-                  <p className="text-[10px] text-slate-500">{h.startDate} to {h.endDate}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{h.startDate} to {h.endDate}</p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button 
                     onClick={() => {
                       setEditingHoliday(h);
@@ -276,7 +276,7 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                       setHolidayEnd(h.endDate);
                     }}
                     title="Edit Holiday"
-                    className="text-blue-500 hover:text-blue-600 p-1.5 hover:bg-blue-500/10 rounded-lg transition-colors"
+                    className="neu-btn text-blue-500 p-2 rounded-xl"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -290,7 +290,7 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                       deleteHoliday(h.id);
                     }}
                     title="Delete Holiday"
-                    className="text-red-500 hover:text-red-600 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="neu-btn text-rose-500 p-2 rounded-xl"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

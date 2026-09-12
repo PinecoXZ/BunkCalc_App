@@ -13,7 +13,7 @@ export const OledThemeCard: React.FC<ThemeCardProps> = ({
       style={{
         width: '375px',
         height: '667px',
-        backgroundColor: '#000000',
+        backgroundColor: '#181c24',
         color: '#ffffff',
         padding: '28px 24px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
@@ -22,7 +22,7 @@ export const OledThemeCard: React.FC<ThemeCardProps> = ({
         flexDirection: 'column',
         justifyContent: 'space-between',
         position: 'relative',
-        border: '1px solid #27272a',
+        border: '1px solid #2a313d',
       }}
     >
       <div>
@@ -30,8 +30,8 @@ export const OledThemeCard: React.FC<ThemeCardProps> = ({
           <span style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.03em', color: '#ffffff', textTransform: 'uppercase' }}>
             BunkCalc
           </span>
-          <span style={{ fontSize: '10px', fontWeight: 700, color: '#a1a1aa', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            OLED Minimal
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            Dark Soft
           </span>
         </div>
 

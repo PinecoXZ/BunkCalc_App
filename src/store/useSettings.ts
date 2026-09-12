@@ -153,7 +153,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
 let systemThemeMediaListener: ((e: MediaQueryListEvent) => void) | null = null;
 
-function applyTheme(theme: 'light' | 'dark' | 'oled' | 'system', accent: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' = 'blue') {
+function applyTheme(theme: 'light' | 'dark' | 'system', accent: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' = 'blue') {
   const root = window.document.documentElement;
   
   // Clean up previous system theme listener if any
@@ -161,6 +161,9 @@ function applyTheme(theme: 'light' | 'dark' | 'oled' | 'system', accent: 'blue' 
     window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', systemThemeMediaListener);
     systemThemeMediaListener = null;
   }
+
+  // Ensure any legacy oled class is stripped
+  root.classList.remove('oled');
 
   if (theme === 'system') {
     const listener = (e: MediaQueryListEvent) => {
@@ -170,25 +173,17 @@ function applyTheme(theme: 'light' | 'dark' | 'oled' | 'system', accent: 'blue' 
       } else {
         rootEl.classList.remove('dark');
       }
-      rootEl.classList.remove('oled');
     };
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', listener);
     systemThemeMediaListener = listener;
   }
 
-  const isDark = theme === 'dark' || theme === 'oled' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const isOled = theme === 'oled';
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   
   if (isDark) {
     root.classList.add('dark');
   } else {
     root.classList.remove('dark');
-  }
-
-  if (isOled) {
-    root.classList.add('oled');
-  } else {
-    root.classList.remove('oled');
   }
 
   root.classList.remove('accent-blue', 'accent-purple', 'accent-emerald', 'accent-amber', 'accent-rose');

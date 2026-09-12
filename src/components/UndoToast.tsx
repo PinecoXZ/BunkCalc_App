@@ -62,27 +62,26 @@ const UndoToast: React.FC<Props> = ({ subjectName, status, onUndo, onDismiss }) 
       `}</style>
 
       <div
-        className="fixed bottom-24 left-4 right-4 z-50"
+        className="fixed bottom-24 left-4 right-4 z-50 max-w-md mx-auto"
         style={{
           animation: 'undoToastSlideUp 0.3s ease-out forwards',
         }}
         role="alert"
         aria-live="assertive"
       >
-        <div className="relative bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-2xl overflow-hidden">
+        <div className="relative neu-card border border-[var(--neu-shadow-dark)]/25 rounded-2xl p-4 overflow-hidden">
           {/* Content row */}
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-200 flex-1 min-w-0">
+            <p className="text-sm text-slate-800 dark:text-slate-100 flex-1 min-w-0">
               Marked{' '}
-              <span className="font-semibold text-white truncate">{subjectName}</span>
+              <span className="font-bold text-slate-900 dark:text-white truncate">{subjectName}</span>
               {' '}as{' '}
-              <span className={`font-bold ${color}`}>{label}</span>
+              <span className={`font-black ${color}`}>{label}</span>
             </p>
 
             <button
               onClick={handleUndo}
-              className="text-blue-400 font-black uppercase text-xs shrink-0 px-3 py-1.5 rounded-lg
-                         hover:bg-blue-400/10 active:bg-blue-400/20 transition-colors duration-150"
+              className="neu-btn text-blue-600 dark:text-blue-400 font-black uppercase text-xs shrink-0 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
               aria-label="Undo action"
             >
               Undo
@@ -90,7 +89,7 @@ const UndoToast: React.FC<Props> = ({ subjectName, status, onUndo, onDismiss }) 
           </div>
 
           {/* Progress bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-1">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--neu-inset-dark)]/20">
             <div
               className={`h-full rounded-b-2xl ${progressColor}`}
               style={{

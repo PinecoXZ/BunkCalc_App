@@ -50,7 +50,7 @@ const SplashScreen: React.FC<Props> = ({ onComplete }) => {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        backgroundColor: '#000000',
+        backgroundColor: 'var(--neu-bg, #181c24)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

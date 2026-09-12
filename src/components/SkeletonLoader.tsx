@@ -11,7 +11,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 }) => {
   return (
     <div
-      className={`w-full ${height} bg-slate-200 dark:bg-slate-800/60 rounded-3xl animate-pulse ${className}`}
+      className={`w-full ${height} neu-inset rounded-3xl animate-pulse ${className}`}
     />
   );
 };

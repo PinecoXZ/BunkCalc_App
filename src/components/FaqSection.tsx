@@ -44,14 +44,14 @@ export const FaqSection: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800">
+    <div className="neu-card rounded-2xl overflow-hidden divide-y divide-[var(--neu-shadow-dark)]/15 border border-[var(--neu-shadow-dark)]/10">
       {FAQ_ITEMS.map((item, idx) => {
         const isOpen = openIndex === idx;
         return (
           <div key={idx} className="transition-colors">
             <button
               onClick={() => toggleIndex(idx)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-[var(--neu-shadow-dark)]/5 transition-colors cursor-pointer"
             >
               <span className="text-sm font-bold text-slate-900 dark:text-white pr-4">
                 {item.question}
@@ -70,7 +70,7 @@ export const FaqSection: React.FC = () => {
             </button>
 
             {isOpen && (
-              <div className="px-4 pb-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="px-4 pb-4 pt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed animate-in fade-in slide-in-from-top-1 duration-150">
                 {item.answer}
               </div>
             )}

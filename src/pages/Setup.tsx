@@ -5,8 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Subject } from '../lib/types';
 import { sanitizeName } from '../lib/validation';
 import { AppModal } from '../components/AppModal';
-import { TimetableShareModal } from '../components/TimetableShareModal';
-import { TimetableScannerModal } from '../components/TimetableScannerModal';
 
 const Setup: React.FC = () => {
   const { addSubject } = useSubjects();
@@ -14,8 +12,6 @@ const Setup: React.FC = () => {
   
   const [step, setStep] = useState(1);
   const [tempSubjects, setTempSubjects] = useState<Subject[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showScannerModal, setShowScannerModal] = useState(false);
   
   // Current subject being added
   const [name, setName] = useState('');
@@ -116,39 +112,39 @@ const Setup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-12 flex flex-col transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--neu-bg)] text-slate-900 dark:text-white p-6 pb-12 flex flex-col transition-colors duration-300">
       <header className="mb-8">
-        <h1 className="text-3xl font-black text-blue-600 dark:text-blue-500 italic uppercase">BunkCalc</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-xs font-bold tracking-widest uppercase">Semester Setup</p>
+        <h1 className="text-3xl font-black text-blue-600 dark:text-blue-500 italic tracking-tight">BunkCalc</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-xs font-bold tracking-wider uppercase mt-0.5">Semester Setup</p>
       </header>
 
       {step === 1 && (
         <div className="flex-1 animate-in fade-in slide-in-from-right duration-300">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-1">Academic Preferences</h2>
-            <p className="text-xs text-slate-500 italic">These can be changed later in settings.</p>
+          <div className="mb-6">
+            <h2 className="text-xl font-black tracking-tight mb-1">Academic Preferences</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">These can be changed anytime in settings.</p>
           </div>
 
-          <div className="space-y-6 bg-slate-50 dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <div className="space-y-6 neu-card p-6 rounded-3xl">
             <div>
-              <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Attendance Threshold (%)</label>
+              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Attendance Threshold (%)</label>
               <select 
                 value={Math.round(settings.globalThreshold * 100)}
                 onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
+                className="w-full neu-input rounded-2xl p-4 outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
               >
                 {[60, 65, 70, 75, 80, 85, 90].map(val => (
-                  <option key={val} value={val}>{val}%</option>
+                  <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900">{val}%</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-slate-500 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Semester End Date</label>
+              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Semester End Date</label>
               <input 
                 type="date" 
                 value={(settings.semesterEndDate || '').split('T')[0]}
                 onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
+                className="w-full neu-input rounded-2xl p-4 outline-none text-slate-900 dark:text-white font-bold"
               />
             </div>
           </div>
@@ -172,7 +168,7 @@ const Setup: React.FC = () => {
               }
               setStep(2);
             }}
-            className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 active:scale-95 transition-all mt-10"
+            className="w-full neu-btn-primary py-4.5 rounded-2xl font-black uppercase tracking-wider text-sm mt-10"
           >
             Next Step
           </button>
@@ -182,130 +178,85 @@ const Setup: React.FC = () => {
       {step === 2 && (
         <div className="flex-1 animate-in fade-in slide-in-from-right duration-300 max-h-[80vh] overflow-y-auto pr-1">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Add Subjects</h2>
+            <h2 className="text-xl font-black tracking-tight">Add Subjects</h2>
             <button 
               onClick={() => setStep(1)}
-              className="text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center gap-1"
+              className="neu-btn px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
               </svg>
               Back
             </button>
           </div>
-
-          {/* Quick Import Actions Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div 
-              onClick={() => setShowScannerModal(true)}
-              className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/25 p-3.5 rounded-2xl flex flex-col justify-between cursor-pointer hover:border-blue-500/40 active:scale-[0.98] transition-all shadow-sm group"
-            >
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                  Scan Photo
-                </p>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Snap or upload timetable screenshot
-              </p>
-            </div>
-
-            <div 
-              onClick={() => setShowImportModal(true)}
-              className="bg-gradient-to-br from-purple-600/10 to-pink-600/10 border border-purple-500/25 p-3.5 rounded-2xl flex flex-col justify-between cursor-pointer hover:border-purple-500/40 active:scale-[0.98] transition-all shadow-sm group"
-            >
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                  </svg>
-                </div>
-                <p className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                  Class Code / QR
-                </p>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Import from section classmate
-              </p>
-            </div>
-          </div>
           
-          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
-            <div className="space-y-6">
+          <div className="neu-card rounded-3xl p-6 mb-8">
+            <div className="space-y-5">
               <div>
-                <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Subject Name</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Subject Name</label>
                 <input 
                   placeholder="e.g. Data Structures" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={40}
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white"
+                  className="w-full neu-input rounded-xl p-3 outline-none text-slate-900 dark:text-white font-bold"
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Room / Hall (Optional)</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Room / Hall (Optional)</label>
                   <input 
                     placeholder="e.g. Room 304" 
                     value={room}
                     onChange={(e) => setRoom(e.target.value)}
                     maxLength={25}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+                    className="w-full neu-input rounded-xl p-3 outline-none text-slate-900 dark:text-white text-xs font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Faculty (Optional)</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Faculty (Optional)</label>
                   <input 
                     placeholder="e.g. Prof. Sharma" 
                     value={faculty}
                     onChange={(e) => setFaculty(e.target.value)}
                     maxLength={30}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white text-xs font-bold"
+                    className="w-full neu-input rounded-xl p-3 outline-none text-slate-900 dark:text-white text-xs font-bold"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-3.5">
                 <div className="flex-1">
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Credits</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Credits</label>
                   <select 
                     value={credits}
                     onChange={(e) => setCredits(Number(e.target.value))}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                    className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
                   >
-                    {[1, 2, 3, 4, 5].map(c => <option key={c} value={c}>{c}</option>)}
+                    {[1, 2, 3, 4, 5].map(c => <option key={c} value={c} className="bg-slate-50 dark:bg-slate-900">{c}</option>)}
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Type</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Type</label>
                   <select 
                     value={isLab ? 'lab' : 'theory'}
                     onChange={(e) => setIsLab(e.target.value === 'lab')}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
+                    className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
                   >
-                    <option value="theory">Theory</option>
-                    <option value="lab">Lab</option>
+                    <option value="theory" className="bg-slate-50 dark:bg-slate-900">Theory</option>
+                    <option value="lab" className="bg-slate-50 dark:bg-slate-900">Lab</option>
                   </select>
-                  <p className="text-[10px] text-slate-500 mt-1 italic">
-                    Lab sessions count as 2 classes in attendance and bunk calculations.
-                  </p>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Target %</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Target %</label>
                   <select 
                     value={Math.round(subjectThreshold * 100)}
                     onChange={(e) => setSubjectThreshold(Number(e.target.value) / 100)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
+                    className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
                   >
                     {[60, 65, 70, 75, 80, 85, 90].map(val => (
-                      <option key={val} value={val}>{val}%</option>
+                      <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900">{val}%</option>
                     ))}
                   </select>
                 </div>
@@ -313,34 +264,34 @@ const Setup: React.FC = () => {
 
               {!useCustomTime && (
                 <div>
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Class Time</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Class Time</label>
                   <input 
                     type="time"
                     value={globalSlot}
                     onChange={(e) => setGlobalTime(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white font-bold"
+                    className="w-full neu-input rounded-xl p-3 text-sm outline-none text-slate-900 dark:text-white font-bold"
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-between bg-white dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between neu-flat-sm p-3.5 rounded-2xl">
                 <div>
                   <p className="text-sm font-bold text-slate-900 dark:text-white">Custom timing</p>
-                  <p className="text-[10px] text-slate-500 italic">Diff times on diff days</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Diff times on diff days</p>
                 </div>
                 <button 
                   onClick={() => setUseCustomTime(!useCustomTime)}
                   role="switch"
                   aria-checked={useCustomTime}
                   aria-label="Custom timing per day"
-                  className={`w-10 h-5 rounded-full transition-colors relative ${useCustomTime ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                  className={`w-11 h-5.5 rounded-full transition-all relative neu-inset ${useCustomTime ? 'bg-blue-500/20' : ''}`}
                 >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useCustomTime ? 'left-5' : 'left-1'}`}></div>
+                  <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full transition-all ${useCustomTime ? 'left-6 bg-blue-600 shadow-sm' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
                 </button>
               </div>
 
               <div>
-                <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Class Schedule</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2.5">Class Schedule</label>
                 <div className="grid grid-cols-4 gap-2">
                   {daysOfWeek.map((day, idx) => {
                     const isActive = scheduleMap[idx] !== undefined;
@@ -348,10 +299,10 @@ const Setup: React.FC = () => {
                       <button
                         key={day}
                         onClick={() => toggleDay(idx)}
-                        className={`py-2 rounded-lg text-[10px] font-black transition-all ${
+                        className={`py-2.5 rounded-xl text-[11px] font-black transition-all ${
                           isActive 
-                            ? 'bg-blue-600 text-white shadow-lg' 
-                            : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-transparent'
+                            ? 'neu-chip-active' 
+                            : 'neu-chip'
                         }`}
                       >
                         {day}
@@ -364,12 +315,12 @@ const Setup: React.FC = () => {
                   <div className="mt-4 space-y-2 max-h-32 overflow-y-auto pr-1">
                     {Object.keys(scheduleMap).map(Number).map(dayIdx => (
                       <div key={dayIdx} className="flex items-center justify-between gap-4">
-                        <span className="text-xs font-bold text-slate-500 w-8">{daysOfWeek[dayIdx]}</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-8">{daysOfWeek[dayIdx]}</span>
                         <input 
                           type="time"
                           value={scheduleMap[dayIdx]}
                           onChange={(e) => updateTime(dayIdx, e.target.value)}
-                          className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-900 dark:text-white"
+                          className="flex-1 neu-input rounded-xl p-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
                         />
                       </div>
                     ))}
@@ -377,28 +328,28 @@ const Setup: React.FC = () => {
                 )}
               </div>
 
-              <div className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="neu-inset p-4.5 rounded-2xl space-y-3">
                 <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Mid-Semester History (Optional)</p>
-                <p className="text-[10px] text-slate-500 italic">Fill this in if you already have past attendance history this semester.</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Fill this in if you already have past attendance history this semester.</p>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Attended So Far</label>
+                    <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Attended So Far</label>
                     <input 
                       type="number" 
                       min={0}
                       value={attendedSoFar}
                       onChange={(e) => setAttendedSoFar(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl text-sm outline-none focus:border-blue-500 font-bold text-slate-900 dark:text-white"
+                      className="w-full neu-input p-2.5 rounded-xl text-sm outline-none font-bold text-slate-900 dark:text-white"
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Missed So Far</label>
+                    <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Missed So Far</label>
                     <input 
                       type="number" 
                       min={0}
                       value={missedSoFar}
                       onChange={(e) => setMissedSoFar(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl text-sm outline-none focus:border-blue-500 font-bold text-slate-900 dark:text-white"
+                      className="w-full neu-input p-2.5 rounded-xl text-sm outline-none font-bold text-slate-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -407,25 +358,25 @@ const Setup: React.FC = () => {
               <button 
                 onClick={handleAddSubject}
                 disabled={!name || Object.keys(scheduleMap).length === 0}
-                className="w-full bg-slate-200 dark:bg-slate-800 py-3 rounded-xl text-xs font-black uppercase text-blue-600 dark:text-blue-400 border border-blue-500/20 disabled:opacity-50"
+                className="w-full neu-btn py-3 rounded-xl text-xs font-black uppercase text-blue-600 dark:text-blue-400 disabled:opacity-50"
               >
                 + Add Subject
               </button>
             </div>
           </div>
 
-          <div className="space-y-2 mb-8">
+          <div className="space-y-2.5 mb-8">
             {tempSubjects.length > 0 && <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Added Subjects</p>}
             {tempSubjects.map((s, i) => (
-              <div key={i} className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm animate-in fade-in slide-in-from-bottom duration-200">
+              <div key={i} className="flex justify-between items-center neu-flat-sm p-3.5 rounded-2xl animate-in fade-in slide-in-from-bottom duration-200">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{s.name}</p>
-                  <p className="text-[10px] text-slate-500">{s.schedule.length} sessions per week</p>
+                  <p className="font-bold text-sm truncate text-slate-900 dark:text-white">{s.name}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">{s.schedule.length} sessions per week</p>
                 </div>
                 <button 
                   onClick={() => setTempSubjects(tempSubjects.filter((_, idx) => idx !== i))}
                   aria-label="Remove subject"
-                  className="text-red-500 p-2"
+                  className="neu-btn text-rose-500 p-2 rounded-xl"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -438,7 +389,7 @@ const Setup: React.FC = () => {
           <button 
             disabled={tempSubjects.length === 0}
             onClick={handleFinish}
-            className="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50 mt-auto"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white py-4.5 rounded-2xl font-black uppercase tracking-wider text-sm shadow-xl shadow-emerald-500/20 transition-all disabled:opacity-50 mt-auto"
           >
             Finish & Launch
           </button>
@@ -457,21 +408,6 @@ const Setup: React.FC = () => {
           onCancel={modal.onCancel}
         />
       )}
-
-      {/* Timetable Share & Import Modal */}
-      <TimetableShareModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-      />
-
-      {/* Timetable Photo & Text Scanner Modal */}
-      <TimetableScannerModal
-        isOpen={showScannerModal}
-        onClose={() => setShowScannerModal(false)}
-        onApplySubjects={(scanned) => {
-          setTempSubjects([...tempSubjects, ...scanned]);
-        }}
-      />
     </div>
   );
 };

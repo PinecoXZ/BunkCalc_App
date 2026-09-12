@@ -1,9 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "2.2.1",
-  "versionCode": 9,
-  "versionName": "2.2.2",
+  "versionCode": 10,
+  "versionName": "2.2.3",
   "apkUrl": "https://bunk-calc-web.vercel.app/bunkcalc.apk",
-  "changelog": "v2.2.1: Holiday & exam break class display fix on Today tab, enhanced calendar view with holiday indicators, Android widget holiday sync, and comprehensive performance optimizations."
-  "changelog": "v2.2.2: Added Meme Roast notification mode, dynamic attendance celebrations, Semester Attendance Wrapped share card, and updated legal disclosures."
+  "changelog": "v2.2.3: Neumorphic (Soft UI 2.0) redesign with Light and Dark modes, zero-latency bottom navigation, streamlined offline architecture, and UI/UX performance optimizations."
 }

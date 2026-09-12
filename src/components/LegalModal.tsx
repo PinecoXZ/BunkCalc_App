@@ -9,16 +9,16 @@ interface Props {
 
 const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-white dark:bg-black/95 z-[60] flex flex-col animate-in fade-in duration-200">
-      <header className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+    <div className="fixed inset-0 bg-[var(--neu-bg)] text-slate-900 dark:text-white z-[60] flex flex-col animate-in fade-in duration-200">
+      <header className="p-5 border-b border-slate-200/50 dark:border-slate-800/60 flex justify-between items-center bg-[var(--neu-surface)]">
+        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h2>
         <button 
           onClick={onClose} 
           aria-label="Close modal"
-          className="bg-slate-200 dark:bg-slate-800 p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+          className="neu-btn p-2.5 rounded-2xl text-slate-600 dark:text-slate-300 cursor-pointer"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </header>

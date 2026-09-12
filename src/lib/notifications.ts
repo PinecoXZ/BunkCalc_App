@@ -95,7 +95,7 @@ export const scheduleDailyClassReminders = async (
   for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
     const targetDate = new Date(now.getTime() + dayOffset * 24 * 60 * 60 * 1000);
     const targetDay = targetDate.getDay(); // 0-6 (0 is Sunday)
-    const targetDateStr = targetDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    const targetDateStr = toISODateStr(targetDate); // YYYY-MM-DD format
 
     // Check if target date is in a holiday
     const isHoliday = settings.holidays?.some(h => targetDateStr >= h.startDate && targetDateStr <= h.endDate);

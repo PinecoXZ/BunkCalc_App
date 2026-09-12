@@ -83,24 +83,24 @@ export const AppModal: React.FC<AppModalProps> = ({
     switch (type) {
       case 'success':
         return (
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-950/50 border border-emerald-500/30 text-emerald-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="neu-inset mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-emerald-500">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         );
       case 'error':
         return (
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-950/50 border border-rose-500/30 text-rose-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="neu-inset mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-rose-500">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
         );
       case 'confirm':
         return (
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="neu-inset mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-amber-500">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
@@ -108,8 +108,8 @@ export const AppModal: React.FC<AppModalProps> = ({
       case 'alert':
       default:
         return (
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-950/50 border border-sky-500/30 text-sky-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="neu-inset mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-blue-500">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -123,16 +123,16 @@ export const AppModal: React.FC<AppModalProps> = ({
       aria-modal="true"
       aria-labelledby="modal-title"
       aria-describedby="modal-message"
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-slate-100 animate-in zoom-in-95 duration-200 flex flex-col gap-4 text-center">
+      <div className="neu-card rounded-3xl p-6 w-full max-w-sm text-slate-800 dark:text-slate-100 animate-in zoom-in-95 duration-200 flex flex-col gap-4 text-center">
         {renderIcon()}
         
-        <div className="space-y-2">
-          <h2 id="modal-title" className="text-xl font-bold tracking-tight text-white">
+        <div className="space-y-1.5">
+          <h2 id="modal-title" className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
             {title}
           </h2>
-          <p id="modal-message" className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
+          <p id="modal-message" className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium whitespace-pre-line">
             {message}
           </p>
         </div>
@@ -143,7 +143,7 @@ export const AppModal: React.FC<AppModalProps> = ({
               ref={cancelButtonRef}
               type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 active:bg-slate-700/80 text-slate-300 font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-500 border border-slate-700/50"
+              className="neu-btn flex-1 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm cursor-pointer"
             >
               {cancelText}
             </button>
@@ -152,10 +152,10 @@ export const AppModal: React.FC<AppModalProps> = ({
             ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
-            className={`flex-1 px-4 py-3 rounded-2xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+            className={`flex-1 px-4 py-3 rounded-2xl font-black text-sm transition-all cursor-pointer ${
               isDangerous
-                ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white focus:ring-rose-500'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:from-blue-700 active:to-indigo-700 text-white focus:ring-blue-500'
+                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 active:scale-95'
+                : 'neu-btn-primary active:scale-95'
             }`}
           >
             {confirmText}

@@ -94,13 +94,13 @@ export const TimetableGrid: React.FC = () => {
   }, [subjects, days, colorMap]);
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-      <div className="flex justify-between items-center mb-3">
+    <div className="neu-card rounded-3xl border border-[var(--neu-shadow-dark)]/15 p-5">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+          <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
             Weekly Master Timetable
           </h3>
-          <p className="text-[10px] text-slate-400">Tap any class block to inspect stats</p>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">Tap any class block to inspect stats</p>
         </div>
       </div>
 
@@ -118,7 +118,7 @@ export const TimetableGrid: React.FC = () => {
         `}</style>
 
         <div
-          className="timetable-scroll flex gap-3 min-w-max scroll-smooth overflow-x-auto"
+          className="timetable-scroll flex gap-3 min-w-max scroll-smooth overflow-x-auto pb-1"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {days.map((day) => {
@@ -128,17 +128,17 @@ export const TimetableGrid: React.FC = () => {
             return (
               <div
                 key={day.dayIndex}
-                className={`flex flex-col min-w-[140px] flex-1 rounded-xl transition-colors duration-200 ${
+                className={`flex flex-col min-w-[140px] flex-1 rounded-2xl transition-colors duration-200 ${
                   isToday
-                    ? 'border-t-2 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 shadow-[0_0_16px_-4px_rgba(59,130,246,0.25)]'
-                    : ''
+                    ? 'neu-inset border border-blue-500/40 bg-blue-500/5'
+                    : 'neu-flat-sm'
                 }`}
               >
                 {/* Column header */}
                 <div className="sticky top-0 z-10 px-3 pt-3 pb-2 flex items-center justify-between">
                   <span
                     className={`text-[10px] font-black uppercase tracking-widest ${
-                      isToday ? 'text-blue-500' : 'text-slate-500'
+                      isToday ? 'text-blue-500' : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {day.label}
@@ -213,12 +213,12 @@ export const TimetableGrid: React.FC = () => {
           onClick={() => setInspectedClass(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4"
+            className="neu-card border border-[var(--neu-shadow-dark)]/15 rounded-3xl p-6 w-full max-w-sm space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-500 block">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
                   {inspectedClass.dayLabel} • {inspectedClass.slot.slot}
                 </span>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
@@ -228,20 +228,18 @@ export const TimetableGrid: React.FC = () => {
               <button
                 onClick={() => setInspectedClass(null)}
                 aria-label="Close"
-                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                className="neu-btn w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
               </button>
             </div>
 
             {/* Room & Faculty Details */}
             {(inspectedClass.slot.room || inspectedClass.subject.room || inspectedClass.slot.faculty || inspectedClass.subject.faculty) && (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs">
+              <div className="p-3.5 neu-inset rounded-xl space-y-1.5 text-xs">
                 {(inspectedClass.slot.room || inspectedClass.subject.room) && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400 font-medium">Room / Hall:</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Room / Hall:</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200">
                       {inspectedClass.slot.room || inspectedClass.subject.room}
                     </span>
@@ -249,7 +247,7 @@ export const TimetableGrid: React.FC = () => {
                 )}
                 {(inspectedClass.slot.faculty || inspectedClass.subject.faculty) && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400 font-medium">Faculty:</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Faculty:</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200">
                       {inspectedClass.slot.faculty || inspectedClass.subject.faculty}
                     </span>
@@ -271,10 +269,10 @@ export const TimetableGrid: React.FC = () => {
 
               return (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="neu-flat-sm p-3 rounded-xl">
                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Attendance</span>
-                      <span className={`text-base font-black ${isSafe ? 'text-emerald-500' : 'text-red-500'}`}>
+                      <span className={`text-base font-black ${isSafe ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {stats.attendancePct.toFixed(1)}%
                       </span>
                       <span className="text-[9px] text-slate-400 block">
@@ -282,9 +280,9 @@ export const TimetableGrid: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                    <div className="neu-flat-sm p-3 rounded-xl">
                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Bunk Buffer</span>
-                      <span className={`text-base font-black ${stats.bunkBudget >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                      <span className={`text-base font-black ${stats.bunkBudget >= 0 ? 'text-blue-500' : 'text-rose-500'}`}>
                         {stats.bunkBudget >= 0 ? `${stats.bunkBudget} Safe` : `Need ${stats.classesNeededToRecover}`}
                       </span>
                       <span className="text-[9px] text-slate-400 block">
@@ -298,7 +296,7 @@ export const TimetableGrid: React.FC = () => {
 
             <button
               onClick={() => setInspectedClass(null)}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider transition-all"
+              className="neu-btn-primary w-full py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer"
             >
               Done
             </button>

@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 
-interface UseSwipeGestureProps {
-  onSwipeRight?: (id: string, extraData?: any) => void;
+interface UseSwipeGestureProps<T = string> {
+  onSwipeRight?: (id: string, extraData?: T) => void;
 }
 
 /**
  * Custom hook managing horizontal pointer swipe gestures with left snap-to-reveal
  * and right trigger-action behaviors.
  */
-export function useSwipeGesture({ onSwipeRight }: UseSwipeGestureProps = {}) {
+export function useSwipeGesture<T = string>({ onSwipeRight }: UseSwipeGestureProps<T> = {}) {
   const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
   const [snappedLeft, setSnappedLeft] = useState<Record<string, boolean>>({});
   const pointerStart = useRef<{ x: number; y: number; id: string } | null>(null);
@@ -40,7 +40,7 @@ export function useSwipeGesture({ onSwipeRight }: UseSwipeGestureProps = {}) {
     }
   };
 
-  const onPointerUp = (e: React.PointerEvent, id: string, extraData?: any) => {
+  const onPointerUp = (e: React.PointerEvent, id: string, extraData?: T) => {
     if (!pointerStart.current) return;
     const dx = e.clientX - pointerStart.current.x;
 

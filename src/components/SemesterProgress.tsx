@@ -27,7 +27,6 @@ const SemesterProgress: React.FC<Props> = ({ semesterEndDate, records }) => {
       const dates = records.map(r => parseLocalDate(r.date).getTime());
       startDate = new Date(Math.min(...dates));
     } else {
-      // If no records, maybe semester starts today
       startDate.setHours(0, 0, 0, 0);
     }
 
@@ -61,10 +60,10 @@ const SemesterProgress: React.FC<Props> = ({ semesterEndDate, records }) => {
   if (!progress) return null;
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6">
-      <div className="flex justify-between items-end mb-2">
+    <div className="neu-card rounded-3xl p-5 mb-6">
+      <div className="flex justify-between items-end mb-3">
         <div>
-          <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Semester Progress</h2>
+          <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Semester Progress</h2>
           <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
             {progress.isFinished ? 'Semester Completed' : `Day ${progress.elapsedDays} of ${progress.totalDays}`}
           </p>
@@ -72,19 +71,21 @@ const SemesterProgress: React.FC<Props> = ({ semesterEndDate, records }) => {
         {!progress.isFinished && (
           <div className="text-right">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Remaining</span>
-            <span className="text-xs font-bold text-blue-500">{progress.remainingWeeks} weeks</span>
+            <span className="text-xs font-extrabold text-blue-500">{progress.remainingWeeks} weeks</span>
           </div>
         )}
       </div>
 
-      <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden relative">
+      <div className="h-2.5 w-full neu-inset rounded-full overflow-hidden p-0.5 relative">
         <div 
-          className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-blue-500 via-indigo-500 to-amber-500"
+          className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500"
           style={{ width: mounted ? `${progress.percentage}%` : '0%' }}
         />
       </div>
-      <div className="mt-2 flex justify-end">
-        <span className="text-[10px] font-bold text-slate-500">{Math.round(progress.percentage)}% Completed</span>
+      <div className="mt-2.5 flex justify-end">
+        <span className="neu-flat-sm text-[10px] font-black px-2.5 py-0.5 rounded-full text-blue-600 dark:text-blue-400">
+          {Math.round(progress.percentage)}% Completed
+        </span>
       </div>
     </div>
   );

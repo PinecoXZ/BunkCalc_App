@@ -23,18 +23,18 @@ export const SubjectSettings: React.FC<SubjectSettingsProps> = ({
 
       <div className="space-y-3">
         {subjects.length === 0 ? (
-          <p className="text-center text-xs text-slate-400 py-6">No enrolled subjects found.</p>
+          <p className="text-center text-xs text-slate-400 py-6 italic font-medium">No enrolled subjects found.</p>
         ) : (
           subjects.map((subject) => (
-            <div key={subject.id} className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <div key={subject.id} className="neu-flat-sm rounded-3xl p-4.5 flex justify-between items-center">
               <div>
                 <p className="font-bold text-slate-900 dark:text-white">{subject.name}</p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {subject.credits} Credits • {subject.schedule.length} classes/week
                   </span>
                   {subject.room && (
-                    <span className="text-[10px] font-bold bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-bold neu-inset text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-lg">
                       {subject.room}
                     </span>
                   )}
@@ -47,7 +47,7 @@ export const SubjectSettings: React.FC<SubjectSettingsProps> = ({
               </div>
               <button 
                 onClick={() => onDeleteSubject(subject.id, subject.name)}
-                className="text-red-500 p-2 hover:bg-red-500/10 rounded-xl transition-colors"
+                className="neu-btn text-rose-500 p-2.5 rounded-xl"
                 aria-label={`Delete ${subject.name}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

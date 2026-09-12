@@ -17,13 +17,8 @@ export const PinKeypad: React.FC<PinKeypadProps> = ({
 }) => {
   const isDark = variant === 'dark';
 
-  const buttonClasses = isDark
-    ? 'h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white text-lg font-black transition-all active:scale-90 active:bg-blue-600 shadow-sm'
-    : 'h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-lg font-black text-slate-900 dark:text-white transition-all shadow-sm';
-
-  const deleteBtnClasses = isDark
-    ? 'h-14 rounded-2xl bg-slate-900/50 hover:bg-slate-800 border border-slate-800/80 text-slate-400 flex items-center justify-center transition-all active:scale-90'
-    : 'h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-all shadow-sm';
+  const buttonClasses = 'neu-btn h-13 rounded-2xl text-lg font-black text-slate-800 dark:text-slate-100 flex items-center justify-center cursor-pointer';
+  const deleteBtnClasses = 'neu-btn h-13 rounded-2xl flex items-center justify-center text-slate-500 dark:text-slate-400 cursor-pointer';
 
   return (
     <div className={`grid grid-cols-3 gap-3 w-full ${isDark ? 'max-w-[260px]' : 'mb-4'}`}>

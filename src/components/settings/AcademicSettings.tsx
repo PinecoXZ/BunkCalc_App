@@ -22,11 +22,11 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
         onBack={onBack}
       />
 
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800 shadow-sm">
-        <div className="p-4 flex justify-between items-center">
+      <div className="neu-card rounded-3xl overflow-hidden divide-y divide-slate-200/50 dark:divide-slate-800/60">
+        <div className="p-4.5 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm">Attendance Threshold</p>
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Attendance Threshold</p>
               <HelpTooltip
                 title="Attendance Threshold"
                 content="The target percentage required by your college or university (e.g. 75% or 80%). Your bunk budget is calculated based on this."
@@ -37,18 +37,18 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
           <select 
             value={Math.round(settings.globalThreshold * 100)}
             onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+            className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
           >
             {[60, 65, 70, 75, 80, 85, 90].map(val => (
-              <option key={val} value={val}>{val}%</option>
+              <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">{val}%</option>
             ))}
           </select>
         </div>
 
-        <div className="p-4 flex justify-between items-center">
+        <div className="p-4.5 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm">Danger Zone Buffer</p>
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Danger Zone Buffer</p>
               <HelpTooltip
                 title="Danger Zone Buffer"
                 content="Buffer percentage above your threshold that triggers warning banners before you fall below the required attendance."
@@ -59,19 +59,19 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
           <select 
             value={Math.round(settings.warningBuffer * 100)}
             onChange={(e) => setSettings({ ...settings, warningBuffer: Number(e.target.value) / 100 })}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+            className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
           >
             {[2, 3, 5, 7, 10].map(val => (
-              <option key={val} value={val}>{val}%</option>
+              <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">{val}%</option>
             ))}
           </select>
         </div>
 
         {/* Honor Target Goal */}
-        <div className="p-4 flex justify-between items-center">
+        <div className="p-4.5 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm">Honor Target (Optional)</p>
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Honor Target (Optional)</p>
               <HelpTooltip
                 title="Honor Target"
                 content="Higher target threshold (e.g. 85% or 90%) for top internal assessment marks or scholarship criteria."
@@ -85,18 +85,18 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
               const val = Number(e.target.value);
               setSettings({ ...settings, targetThreshold: val === 0 ? undefined : val / 100 });
             }}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+            className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
           >
-            <option value={0}>None</option>
+            <option value={0} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">None</option>
             {[80, 85, 90, 95].map(val => (
-              <option key={val} value={val}>{val}%</option>
+              <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">{val}%</option>
             ))}
           </select>
         </div>
 
-        <div className="p-4">
+        <div className="p-4.5">
           <div className="flex items-center gap-1.5 mb-1">
-            <p className="font-bold text-sm">Semester End Date</p>
+            <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Semester End Date</p>
             <HelpTooltip
               title="Semester End Date"
               content="Defines how many remaining classes exist in the semester pool to compute exact safe bunks."
@@ -107,7 +107,7 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
             type="date" 
             value={settings.semesterEndDate.split('T')[0]}
             onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
-            className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+            className="w-full neu-input rounded-xl p-3 text-sm font-bold outline-none text-slate-900 dark:text-white"
           />
         </div>
       </div>

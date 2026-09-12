@@ -98,7 +98,7 @@ export const ThemedIcon: React.FC<ThemedIconProps> = ({
       viewBox="0 0 24 24"
       fill="none"
       stroke={strokeColor}
-      className={`transition-colors duration-200 text-slate-700 dark:text-slate-200 html.oled:text-slate-100 ${className}`}
+      className={`transition-colors duration-200 text-slate-700 dark:text-slate-200 ${className}`}
     >
       {renderIconPath()}
     </svg>

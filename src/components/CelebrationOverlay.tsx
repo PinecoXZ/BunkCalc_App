@@ -45,12 +45,11 @@ const ABSENT_MEMES = [
 
 const CelebrationOverlay: React.FC<Props> = ({ type, onDone }) => {
   const toneMode = useSettings((state) => state.settings.toneMode);
-
-  const memeText = React.useMemo(() => {
+  const [memeText] = React.useState<string | null>(() => {
     if (toneMode !== 'meme' || !type) return null;
     const pool = type === 'present' ? PRESENT_MEMES : ABSENT_MEMES;
     return pool[Math.floor(Math.random() * pool.length)];
-  }, [type, toneMode]);
+  });
 
   useEffect(() => {
     if (!type) return;

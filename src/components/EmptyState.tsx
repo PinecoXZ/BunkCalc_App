@@ -75,22 +75,22 @@ const EmptyState: React.FC<Props> = ({ icon, title, subtitle, action }) => {
       <style>{floatKeyframes}</style>
       <div className="flex flex-col items-center justify-center text-center py-20">
         <div
-          className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-6"
+          className="w-20 h-20 rounded-3xl neu-inset flex items-center justify-center mx-auto mb-6"
           style={{ animation: 'float 3s ease-in-out infinite' }}
         >
           {icons[icon]}
         </div>
-        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
+        <h3 className="text-lg font-black text-slate-800 dark:text-slate-200 mb-2">
           {title}
         </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed font-medium">
           {subtitle}
         </p>
         {action && (
           <button
             type="button"
             onClick={action.onClick}
-            className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all"
+            className="neu-btn-primary mt-6 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer"
           >
             {action.label}
           </button>

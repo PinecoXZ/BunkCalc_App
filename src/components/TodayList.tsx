@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
@@ -94,7 +94,7 @@ const TodayList: React.FC = () => {
     resetSwipe,
   } = useSwipeGesture({
     onSwipeRight: (subjectId, slotTime) => {
-      handleMarkRef.current?.(subjectId, 'present', slotTime);
+      handleMarkRef.current?.(subjectId, 'present', slotTime || '');
     },
   });
 
@@ -170,7 +170,9 @@ const TodayList: React.FC = () => {
     await executeMark(subjectId, status);
   }, [executeMark, resetSwipe]);
 
-  handleMarkRef.current = handleMark;
+  useEffect(() => {
+    handleMarkRef.current = handleMark;
+  }, [handleMark]);
 
   // Batch Mark All Present
   const handleMarkAllPresent = async () => {
@@ -289,14 +291,14 @@ const TodayList: React.FC = () => {
 
   if (todayClasses.length === 0) {
     return (
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-10 text-center border border-slate-200 dark:border-slate-800 border-dashed">
-        <div className="bg-slate-100 dark:bg-slate-800 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="neu-card rounded-3xl p-10 text-center">
+        <div className="neu-inset w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
-        <p className="text-slate-400 dark:text-slate-400 font-medium">No classes scheduled for today.</p>
-        <p className="text-slate-500 dark:text-slate-600 text-xs mt-1">Check your dashboard to see all subjects.</p>
+        <p className="text-slate-700 dark:text-slate-300 font-bold text-base">No classes scheduled for today.</p>
+        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1 font-medium">Check your dashboard or timetable to view other days.</p>
       </div>
     );
   }
@@ -309,34 +311,34 @@ const TodayList: React.FC = () => {
   return (
     <>
       {todayHoliday && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 flex justify-between items-center text-xs">
+        <div className="neu-card border-amber-500/30 rounded-2xl p-3.5 mb-4 flex justify-between items-center text-xs">
           <div className="flex items-center gap-2">
             <span className="text-amber-500 font-bold">🏖️ Holiday Active:</span>
             <span className="text-slate-700 dark:text-slate-300 font-semibold">{todayHoliday.name}</span>
           </div>
           <button
             onClick={() => setShowOverriddenSchedule(false)}
-            className="text-xs font-bold text-amber-600 dark:text-amber-400 underline cursor-pointer"
+            className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-amber-600 dark:text-amber-400 cursor-pointer"
           >
             Hide Timetable
           </button>
         </div>
       )}
-      {/* â”€â”€ Today's Progress Card & Quick Actions â”€â”€ */}
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 mb-4 space-y-3 shadow-sm">
+      {/* Today's Progress Card & Quick Actions */}
+      <div className="neu-card rounded-3xl p-5 mb-5 space-y-3.5">
         <div className="flex justify-between items-center">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
               Today's Logging Progress
             </span>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm font-black text-slate-900 dark:text-white">
+              <span className="text-base font-black text-slate-900 dark:text-white">
                 {markedCount} of {totalToday} Marked
               </span>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+              <span className={`neu-flat-sm text-[10px] font-black px-2.5 py-0.5 rounded-full ${
                 allMarked 
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' 
-                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                  ? 'text-emerald-600 dark:text-emerald-400' 
+                  : 'text-blue-600 dark:text-blue-400'
               }`}>
                 {Math.round(progressPct)}%
               </span>
@@ -347,7 +349,7 @@ const TodayList: React.FC = () => {
           {!allMarked && (
             <button
               onClick={handleMarkAllPresent}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+              className="neu-btn-primary px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -358,7 +360,7 @@ const TodayList: React.FC = () => {
         </div>
 
         {/* Progress Bar Track */}
-        <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div className="w-full neu-inset h-2 rounded-full overflow-hidden p-0.5">
           <div 
             className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 rounded-full"
             style={{ width: `${progressPct}%` }}
@@ -427,7 +429,7 @@ const TodayList: React.FC = () => {
               {/* Main card (swipeable) */}
               <div 
                 aria-label={"Mark attendance for " + subject.name}
-                className="bg-slate-50 dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm dark:shadow-md relative cursor-grab active:cursor-grabbing rounded-2xl"
+                className="neu-card p-4 flex items-center justify-between relative cursor-grab active:cursor-grabbing rounded-3xl overflow-hidden"
                 style={{ 
                   transform: `translateX(${offset}px)`,
                   transition: offset === 0 || offset === -200 ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
@@ -465,22 +467,22 @@ const TodayList: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex-1 min-w-0 mr-3 pl-1.5">
+                <div className="flex-1 min-w-0 mr-3 pl-2">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-base truncate text-slate-900 dark:text-white">{subject.name}</h4>
-                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${safety.color}`}>
+                    <h4 className="font-extrabold text-base truncate text-slate-900 dark:text-white">{subject.name}</h4>
+                    <span className={`neu-flat-sm text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider ${safety.color}`}>
                       {safety.label}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-tighter">
+                    <span className="neu-flat-sm text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-md">
                       {slotTime}
                     </span>
-                    <span className="text-slate-500 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                       {subject.isLab ? 'Lab' : 'Theory'}
                     </span>
                     {(slotInfo?.room || subject.room) && (
-                      <span className="text-slate-600 dark:text-slate-400 text-[10px] font-bold bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                      <span className="neu-flat-sm text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
                         {slotInfo?.room || subject.room}
                       </span>
                     )}
@@ -497,7 +499,7 @@ const TodayList: React.FC = () => {
                     /* ALREADY MARKED: Show status badge + Copy Notice + Reset button */
                     <div className="flex items-center gap-1.5">
                       {currentStatus === 'present' && (
-                        <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-500 text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-xl border border-green-500/20 shadow-sm">
+                        <span className="neu-flat-sm inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-2xl">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
@@ -505,7 +507,7 @@ const TodayList: React.FC = () => {
                         </span>
                       )}
                       {currentStatus === 'absent' && (
-                        <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-xl border border-red-500/20 shadow-sm">
+                        <span className="neu-flat-sm inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-2xl">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -514,7 +516,7 @@ const TodayList: React.FC = () => {
                       )}
                       {currentStatus === 'cancelled' && (
                         <div className="flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 bg-slate-500/10 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl border border-slate-500/20 shadow-sm">
+                          <span className="neu-flat-sm inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                             </svg>
@@ -544,7 +546,7 @@ const TodayList: React.FC = () => {
                               }
                             }}
                             title="Copy cancellation message for WhatsApp"
-                            className="p-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 transition-all text-xs font-bold flex items-center gap-1"
+                            className="neu-btn px-2.5 py-1.5 rounded-xl text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 cursor-pointer"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -564,7 +566,7 @@ const TodayList: React.FC = () => {
                           }
                         }}
                         aria-label="Clear attendance"
-                        className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center border border-slate-200/50 dark:border-slate-700/50 transition-colors shadow-sm active:scale-90"
+                        className="neu-btn w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -573,11 +575,11 @@ const TodayList: React.FC = () => {
                     </div>
                   ) : (
                     /* UNMARKED: 1-Tap Quick Action Buttons */
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={async () => await handleMark(subject.id, 'present', slotTime)}
                         title="Mark Present"
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-black flex items-center gap-1 active:scale-95 transition-all shadow-sm"
+                        className="neu-btn-present px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -588,7 +590,7 @@ const TodayList: React.FC = () => {
                       <button
                         onClick={async () => await handleMark(subject.id, 'absent', slotTime)}
                         title="Mark Absent"
-                        className="px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-black flex items-center gap-1 active:scale-95 transition-all shadow-sm"
+                        className="neu-btn-absent px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />

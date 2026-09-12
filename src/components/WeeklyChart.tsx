@@ -11,7 +11,6 @@ const WeeklyChart: React.FC<Props> = ({ records, threshold }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Slight delay to ensure CSS transition triggers after initial render
     const timer = setTimeout(() => setMounted(true), 10);
     return () => clearTimeout(timer);
   }, []);
@@ -42,7 +41,6 @@ const WeeklyChart: React.FC<Props> = ({ records, threshold }) => {
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
       
-      // Calculate ISO week number for label
       const d = new Date(Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()));
       const dayNum = d.getUTCDay() || 7;
       d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -77,35 +75,40 @@ const WeeklyChart: React.FC<Props> = ({ records, threshold }) => {
     });
   }, [records]);
 
-  const getBarColor = (percentage: number, total: number) => {
-    if (total === 0) return 'bg-slate-200 dark:bg-slate-800';
-    if (percentage >= threshold * 100) return 'bg-green-500';
-    if (percentage >= (threshold * 100) - 5) return 'bg-amber-500';
-    return 'bg-red-500';
+  const getBarGradient = (percentage: number, total: number) => {
+    if (total === 0) return 'bg-transparent';
+    if (percentage >= threshold * 100) return 'bg-gradient-to-t from-emerald-600 to-emerald-400';
+    if (percentage >= (threshold * 100) - 5) return 'bg-gradient-to-t from-amber-600 to-amber-400';
+    return 'bg-gradient-to-t from-rose-600 to-rose-400';
   };
 
   return (
     <section className="mb-8">
-      <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Weekly Trend</h2>
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <div className="h-40 flex items-end justify-between gap-2 pt-6 pb-2">
+      <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">
+        Weekly Trend
+      </h2>
+      <div className="neu-card rounded-3xl p-5">
+        <div className="h-44 flex items-end justify-between gap-2 pt-6 pb-2">
           {weekData.map((week, idx) => {
-            const height = week.total === 0 ? 5 : week.percentage; // 5% minimum height for empty
+            const height = week.total === 0 ? 0 : Math.max(8, week.percentage);
             const showValue = week.total > 0;
             return (
               <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
                 <div className="w-full flex justify-center relative h-full items-end">
                   {showValue && (
-                    <span className="absolute -top-6 text-[10px] font-bold text-slate-500 dark:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="absolute -top-6 text-[10px] font-black text-slate-600 dark:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
                       {Math.round(week.percentage)}%
                     </span>
                   )}
-                  <div
-                    className={`w-full max-w-[24px] rounded-t-sm transition-all duration-500 ease-out ${getBarColor(week.percentage, week.total)}`}
-                    style={{ height: mounted ? `${height}%` : '0%' }}
-                  ></div>
+                  {/* Recessed vertical trough */}
+                  <div className="neu-inset w-full max-w-[24px] h-full rounded-2xl p-1 flex items-end justify-center overflow-hidden">
+                    <div
+                      className={`w-full rounded-xl transition-all duration-700 ease-out shadow-sm ${getBarGradient(week.percentage, week.total)}`}
+                      style={{ height: mounted ? `${height}%` : '0%' }}
+                    />
+                  </div>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium mt-2">{week.label}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-2">{week.label}</span>
               </div>
             );
           })}

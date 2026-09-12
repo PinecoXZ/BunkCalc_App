@@ -32,22 +32,22 @@ export const SyncSettings: React.FC<SyncSettingsProps> = ({
         onBack={onBack}
       />
 
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center text-purple-500 shrink-0">
+      <div className="neu-card rounded-3xl p-5 space-y-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center text-purple-500 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">External Calendar Exporter</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed font-medium">
               Export your full recurring timetable into Google Calendar, Apple Calendar, or Outlook with classroom locations and holiday break exclusions.
             </p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <div className="neu-inset p-4.5 rounded-2xl flex justify-between items-center">
           <div>
             <p className="text-xs font-bold text-slate-900 dark:text-white">Export to Calendar (.ics)</p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -69,7 +69,7 @@ export const SyncSettings: React.FC<SyncSettingsProps> = ({
                 });
               }
             }}
-            className="px-3.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider transition-colors active:scale-95 flex items-center gap-1.5 shadow-md shadow-purple-600/20"
+            className="neu-btn px-4 py-2.5 rounded-xl text-purple-600 dark:text-purple-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -80,22 +80,22 @@ export const SyncSettings: React.FC<SyncSettingsProps> = ({
       </div>
 
       {/* Android Home Screen Widget Integration */}
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0">
+      <div className="neu-card rounded-3xl p-5 space-y-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center text-blue-500 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">Android Lock Screen & Widget Cache</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              BunkCalc continuously caches attendance telemetry into local key <code className="bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">bunkcalc_widget_data</code> for fast Android AppWidgets and lock screen glanceables.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed font-medium">
+              BunkCalc continuously caches attendance telemetry into local key <code className="neu-inset px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">bunkcalc_widget_data</code> for fast Android AppWidgets and lock screen glanceables.
             </p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <div className="neu-inset p-4.5 rounded-2xl flex justify-between items-center">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Live Widget Status</span>
             <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export const SyncSettings: React.FC<SyncSettingsProps> = ({
                 onConfirm: () => {},
               });
             }}
-            className="px-3 py-2 rounded-lg bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-black uppercase tracking-wider transition-colors active:scale-95"
+            className="neu-btn px-3.5 py-2 rounded-xl text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-wider"
           >
             Sync Cache
           </button>

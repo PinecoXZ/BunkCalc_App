@@ -46,7 +46,7 @@ export interface Holiday {
   endDate: string;   // YYYY-MM-DD
 }
 
-export type ThemeMode = 'light' | 'dark' | 'oled' | 'system';
+export type ThemeMode = 'light' | 'dark' | 'system';
 export type ThemeAccent = 'blue' | 'purple' | 'emerald' | 'amber' | 'rose';
 
 export type ShareCardTheme = 'neon' | 'oled' | 'academic' | 'terminal' | 'meme';

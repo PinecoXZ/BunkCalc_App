@@ -1,4 +1,4 @@
-﻿import type { Subject, AttendanceRecord, AppSettings, ArchivedSemester, Holiday } from './types';
+import type { Subject, AttendanceRecord, AppSettings, ArchivedSemester, Holiday } from './types';
 
 export function sanitizeName(name: string): string {
   if (typeof name !== 'string') return '';
@@ -176,8 +176,8 @@ function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } 
   if (!isBoolean(s.holidayMode)) return { valid: false };
   if (!isBoolean(s.hapticsEnabled)) return { valid: false };
   
-  const validThemes = ['light', 'dark', 'oled', 'system'];
-  if (!validThemes.includes(s.theme as string)) return { valid: false };
+  const validThemes = ['light', 'dark', 'system'];
+  const theme = s.theme === 'oled' ? 'dark' : (validThemes.includes(s.theme as string) ? s.theme : 'system');
 
   const validAccents = ['blue', 'purple', 'emerald', 'amber', 'rose'];
   const themeAccent = validAccents.includes(s.themeAccent as string) ? (s.themeAccent as AppSettings['themeAccent']) : 'blue';
@@ -193,7 +193,7 @@ function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } 
     reminderMinutesBefore: s.reminderMinutesBefore as 5 | 10 | 15 | 30,
     holidayMode: s.holidayMode,
     hapticsEnabled: s.hapticsEnabled,
-    theme: s.theme as AppSettings['theme'],
+    theme: theme as AppSettings['theme'],
     themeAccent,
   };
 

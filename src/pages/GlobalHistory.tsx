@@ -54,81 +54,81 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-24">
-      <header className="mb-6 flex items-center gap-4">
-        <button onClick={onBack} className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    <div className="min-h-screen bg-[var(--neu-bg)] text-slate-900 dark:text-white p-6 pb-28">
+      <header className="mb-6 flex items-center gap-3.5">
+        <button onClick={onBack} className="neu-btn p-2.5 rounded-2xl text-slate-700 dark:text-slate-200" aria-label="Back">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold">Attendance Log</h1>
+        <h1 className="text-2xl font-black tracking-tight">Attendance Log</h1>
       </header>
 
       {/* Filter Section */}
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6 shadow-sm">
-        <div className="flex gap-2">
+      <div className="neu-card rounded-3xl p-5 mb-6 space-y-3">
+        <div className="flex gap-3">
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-bold uppercase text-slate-500 tracking-widest mb-1 truncate">Subject</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1 truncate">Subject</label>
             <select
               value={filterSubjectId}
               onChange={(e) => setFilterSubjectId(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+              className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
             >
-              <option value="all">All Subjects</option>
+              <option value="all" className="bg-slate-50 dark:bg-slate-900">All Subjects</option>
               {subjects.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id} className="bg-slate-50 dark:bg-slate-900">{s.name}</option>
               ))}
             </select>
           </div>
           <div className="w-1/3 min-w-[100px]">
-            <label className="block text-[10px] font-bold uppercase text-slate-500 tracking-widest mb-1">Status</label>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+              className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
             >
-              <option value="all">All</option>
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all" className="bg-slate-50 dark:bg-slate-900">All</option>
+              <option value="present" className="bg-slate-50 dark:bg-slate-900">Present</option>
+              <option value="absent" className="bg-slate-50 dark:bg-slate-900">Absent</option>
+              <option value="cancelled" className="bg-slate-50 dark:bg-slate-900">Cancelled</option>
             </select>
           </div>
         </div>
 
         <button 
           onClick={() => setShowDateFilter(!showDateFilter)}
-          className="flex items-center gap-1 text-[10px] font-bold uppercase text-blue-500 tracking-widest mt-3 hover:text-blue-600 transition-colors"
+          className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider hover:underline"
         >
           {showDateFilter ? 'Hide Date Filter' : 'Filter by Date'}
-          <svg className={`w-3 h-3 transition-transform ${showDateFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className={`w-3.5 h-3.5 transition-transform ${showDateFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
         {showDateFilter && (
-          <div className="flex gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/80">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 tracking-widest mb-1">Start Date</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Start Date</label>
               <input 
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 tracking-widest mb-1">End Date</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">End Date</label>
               <input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
           </div>
         )}
         
-        <p className="text-[10px] font-bold uppercase text-slate-400 mt-3 text-center tracking-widest">
+        <p className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 text-center tracking-wider pt-1">
           Showing {sortedRecords.length} of {records.length} records
         </p>
       </div>
@@ -143,21 +143,21 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
         ) : (
           <>
             {visibleRecords.map((record) => (
-              <div key={record.id} className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-lg">
+              <div key={record.id} className="neu-flat-sm rounded-2xl p-4 flex justify-between items-center">
                 <div className="flex-1">
-                  <p className="text-[10px] font-black uppercase text-blue-500 tracking-widest mb-0.5">
+                  <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-0.5">
                     {parseLocalDate(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
                   </p>
                   <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">{getSubjectName(record.subjectId)}</h4>
                   {record.status !== 'cancelled' ? (
                     <button 
                       onClick={() => markAttendance({ ...record, status: record.status === 'present' ? 'absent' : 'present' })}
-                      className={`flex items-center gap-1 text-[10px] font-black uppercase mt-1 px-2 py-1 -ml-2 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors ${
-                        record.status === 'present' ? 'text-green-500' : 'text-red-500'
+                      className={`neu-inset inline-flex items-center gap-1 text-[10px] font-black uppercase mt-1 px-2.5 py-1 rounded-xl active:scale-95 transition-transform ${
+                        record.status === 'present' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
                       {record.status}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                       </svg>
                     </button>
@@ -180,9 +180,10 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
                       setModal(null);
                     }
                   })}
-                  className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
+                  className="neu-btn text-slate-400 hover:text-rose-500 p-2 rounded-xl"
+                  aria-label="Delete Record"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
@@ -191,7 +192,7 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
             {sortedRecords.length > displayLimit && (
               <button
                 onClick={() => setDisplayLimit(prev => prev + 50)}
-                className="w-full mt-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="w-full mt-4 neu-btn py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400"
               >
                 Load More Records ({sortedRecords.length - displayLimit} remaining)
               </button>

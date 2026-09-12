@@ -4,14 +4,14 @@
 
 ### _Take Control of Your College Life._
 
-[![Version](https://img.shields.io/badge/version-2.2.2-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
+[![Version](https://img.shields.io/badge/version-2.2.3-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![Platform](https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/PinecoXZ/BunkCalc_App)
 [![License](https://img.shields.io/badge/license-Private-red?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
 [![Capacitor](https://img.shields.io/badge/Capacitor-8-119eff?style=for-the-badge&logo=capacitor&logoColor=white)](https://capacitorjs.com)
 
 The **ultimate proactive attendance tracker** built for university students.  
-Biometric fingerprint lock. 1-tap quick actions. 10 modular settings hubs. Class timetable QR sharing. Zero data collection.
+Biometric fingerprint lock. 1-tap quick actions. 10 modular settings hubs. Neumorphic Soft UI 2.0. Zero data collection.
 
 ---
 
@@ -22,7 +22,7 @@ Biometric fingerprint lock. 1-tap quick actions. 10 modular settings hubs. Class
 | Feature | Description |
 |---|---|
 | ⚡ **1-Tap Attendance & Batch Action** | Direct 1-tap `[Present]` / `[Absent]` marking on cards plus a "Mark All Present" batch action with daily progress bar |
-| 📥 **Mid-Semester Past Attendance** | Enter past attended and missed class numbers during timetable import or edit them anytime in Subject Details |
+| 📥 **Mid-Semester Past Attendance** | Enter past attended and missed class numbers during initial setup or edit them anytime in Subject Details |
 | ✏️ **Interactive Holiday Manager** | Add and manage semester breaks directly with automated reminder rescheduling and calendar sync |
 | 📊 **Weekly Attendance Trends** | 8-week visual bar chart tracking your weekly attendance percentage against your threshold |
 | ⏳ **Semester Progress Bar** | Real-time timeline bar tracking weeks remaining in the semester and elapsed class days |
@@ -59,8 +59,7 @@ Share          @capacitor/share
 BunkCalc1/
 ├── android/                  # Native Android project (Capacitor-managed)
 │   └── app/
-│       ├── build.gradle      # Android build config (versionCode 8, v2.2.1)
-│       ├── build.gradle      # Android build config (versionCode 9, v2.2.2)
+│       ├── build.gradle      # Android build config (versionCode 10, v2.2.3)
 │       └── src/main/
 │           ├── assets/       # Synced web bundle + public assets
 │           └── res/          # Launcher icons (mdpi → xxxhdpi) + splash
@@ -92,7 +91,6 @@ BunkCalc1/
 │   │   ├── storage.ts           # Data migration, persistence, & CSV/PDF export
 │   │   ├── shareCard.ts         # Share card image generation
 │   ├── App.tsx               # Root component
-│   ├── App.css
 │   ├── main.tsx              # React entry point
 │   └── index.css             # Global styles
 ├── index.html                # HTML entry (with CSP meta tag)
@@ -165,7 +163,7 @@ BunkCalc takes security seriously, even as a fully offline application:
 - **Local-first**: Your data never leaves your device
 - **Proactive, not reactive**: The app tells you what to do _before_ it's too late
 - **Respectful**: No ads, no tracking, no analytics, no subscriptions
-- **Beautiful**: Polished dark/light/OLED UI with 100% vector icons and haptic feedback
+- **Beautiful**: Tactile Neumorphic (Soft UI 2.0) dark/light UI with 100% vector icons and haptic feedback
 - **Accessible**: Designed for one-handed use with a clear information hierarchy
 
 ---
@@ -191,6 +189,6 @@ This project is **private** and not open-source. All rights reserved.
 
 **Built with ❤️ for students who know when to show up — and when not to.**
 
-`v2.2.2` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
+`v2.2.3` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
 
 </div>

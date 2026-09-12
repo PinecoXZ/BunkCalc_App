@@ -53,21 +53,21 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
           setIsOpen(!isOpen);
         }}
         aria-label="Help info"
-        className="p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+        className="neu-btn w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-500 transition-colors focus:outline-none cursor-pointer"
       >
-        <ThemedIcon name="help" size={16} />
+        <ThemedIcon name="help" size={14} />
       </button>
 
       {isOpen && (
         <div
-          className={`absolute z-50 w-64 p-3 bg-slate-900 dark:bg-slate-950 text-white rounded-2xl shadow-2xl border border-slate-700/80 dark:border-slate-800 text-xs animate-in fade-in zoom-in-95 duration-150 ${positionClasses}`}
+          className={`absolute z-50 w-64 p-3.5 neu-card text-slate-900 dark:text-white rounded-2xl border border-[var(--neu-shadow-dark)]/20 text-xs animate-in fade-in zoom-in-95 duration-150 ${positionClasses}`}
         >
           {title && (
-            <div className="font-extrabold mb-1 text-blue-400 uppercase tracking-wide text-[10px]">
+            <div className="font-extrabold mb-1 text-blue-600 dark:text-blue-400 uppercase tracking-wide text-[10px]">
               {title}
             </div>
           )}
-          <p className="text-slate-300 leading-relaxed font-medium">{content}</p>
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-medium">{content}</p>
         </div>
       )}
     </div>

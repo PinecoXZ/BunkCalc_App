@@ -4,6 +4,8 @@ import { useSubjects } from './store/useSubjects';
 import { useAttendance } from './store/useAttendance';
 import { migrateStorageIfNeeded } from './lib/storage';
 import Home from './pages/Home';
+import Today from './pages/Today';
+import Statistics from './pages/Statistics';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
 import SkeletonLoader from './components/SkeletonLoader';
@@ -11,20 +13,18 @@ import ErrorBoundary from './components/ErrorBoundary';
 import type { TabType } from './components/BottomNav';
 import type { Subject, AttendanceStatus } from './lib/types';
 import { scheduleDailyClassReminders, initNotificationActionTypes } from './lib/notifications';
+import { toISODateStr } from './lib/dateUtils';
 import { useUpdateStore } from './store/useUpdateStore';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { v4 as uuidv4 } from 'uuid';
 
-// Lazy loaded views
-const Setup = lazy(() => import('./pages/Setup'));
+// Views with background preloading
 const Settings = lazy(() => import('./pages/Settings'));
-const Today = lazy(() => import('./pages/Today'));
-const Statistics = lazy(() => import('./pages/Statistics'));
+const Setup = lazy(() => import('./pages/Setup'));
 const SubjectDetail = lazy(() => import('./pages/SubjectDetail'));
 const GlobalHistory = lazy(() => import('./pages/GlobalHistory'));
 const OnboardingCarousel = lazy(() => import('./components/OnboardingCarousel'));
 const CalendarView = lazy(() => import('./pages/CalendarView'));
-import { TimetableShareModal } from './components/TimetableShareModal';
 import { WhatsNewFlashCard } from './components/WhatsNewFlashCard';
 import { AppLockModal } from './components/AppLockModal';
 import { executeBackHandler } from './lib/backHandler';
@@ -41,15 +41,6 @@ function App() {
   const [homeVisible, setHomeVisible] = useState(false);     // controls fade-in opacity
   const [showWhatsNewFlashCard, setShowWhatsNewFlashCard] = useState(false);
   const [isAppLocked, setIsAppLocked] = useState(true);
-
-  const [autoImportCode, setAutoImportCode] = useState<string | null>(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('import');
-    } catch {
-      return null;
-    }
-  });
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -140,6 +131,13 @@ function App() {
       useUpdateStore.getState().checkForUpdates();
 
       setDataReady(true);
+
+      // Preload Settings chunk quietly in the background so opening it is instantaneous
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          import('./pages/Settings').catch(() => {});
+        }, 1000);
+      }
     };
     init();
 
@@ -153,7 +151,7 @@ function App() {
           
           if (subjectId && (actionId === 'mark_present' || actionId === 'mark_absent' || actionId === 'mark_cancelled')) {
             const status: AttendanceStatus = actionId === 'mark_present' ? 'present' : actionId === 'mark_absent' ? 'absent' : 'cancelled';
-            const todayStr = new Date().toLocaleDateString('en-CA');
+            const todayStr = toISODateStr(new Date());
             await useAttendance.getState().markAttendance({
               id: uuidv4(),
               subjectId,
@@ -196,7 +194,7 @@ function App() {
   // If data hasn't loaded yet AND splash finished, show a minimal loader
   if (!dataReady && !showSplash) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white gap-6 p-8">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#e8ecf4] dark:bg-[#181c24] text-slate-900 dark:text-white gap-6 p-8">
         <div className="text-2xl font-bold animate-pulse italic text-blue-500">BunkCalc</div>
       </div>
     );
@@ -215,7 +213,7 @@ function App() {
               opacity: homeVisible ? 1 : 0,
               transition: 'opacity 300ms ease-in',
             }}
-            className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300"
+            className="min-h-screen bg-[#e8ecf4] dark:bg-[#181c24] text-slate-800 dark:text-slate-100 transition-colors duration-300 pb-24"
           >
             <Suspense fallback={<div className="p-6"><SkeletonLoader height="h-64" /></div>}>
               {showOnboarding && subjects.length === 0 ? (
@@ -232,22 +230,6 @@ function App() {
               )}
             </Suspense>
           </div>
-        )}
-
-        {autoImportCode && (
-          <TimetableShareModal
-            isOpen={true}
-            initialTab="import"
-            initialImportCode={autoImportCode}
-            onClose={() => {
-              setAutoImportCode(null);
-              try {
-                window.history.replaceState({}, document.title, window.location.pathname);
-              } catch {
-                // ignore
-              }
-            }}
-          />
         )}
 
         {/* What's New Flash Card - Appears only once after app update */}

@@ -10,7 +10,6 @@ import type { ArchivedSemester } from '../lib/types';
 import { calculateSubjectStats } from '../lib/calculations';
 import { AppModal } from '../components/AppModal';
 import { sanitizeName, validateArchiveName } from '../lib/validation';
-import { TimetableShareModal } from '../components/TimetableShareModal';
 import { PinSetupModal } from '../components/PinSetupModal';
 import { APP_VERSION_NAME } from '../lib/constants';
 import { registerBackHandler } from '../lib/backHandler';
@@ -56,7 +55,6 @@ const Settings: React.FC = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveName, setArchiveName] = useState('');
   const [showArchivedList, setShowArchivedList] = useState(false);
-  const [showTimetableShare, setShowTimetableShare] = useState(false);
 
   // AppModal State
   const [modal, setModal] = useState<{
@@ -72,7 +70,7 @@ const Settings: React.FC = () => {
 
   // Hardware Back Button listener for subpages & modals in Settings
   useEffect(() => {
-    if (!activeSubPage && !legal && !showArchiveModal && !showTimetableShare && !pinModalMode && !modal && !showArchivedList) {
+    if (!activeSubPage && !legal && !showArchiveModal && !pinModalMode && !modal && !showArchivedList) {
       return;
     }
 
@@ -93,10 +91,6 @@ const Settings: React.FC = () => {
         setShowArchivedList(false);
         return true;
       }
-      if (showTimetableShare) {
-        setShowTimetableShare(false);
-        return true;
-      }
       if (pinModalMode) {
         setPinModalMode(null);
         return true;
@@ -109,7 +103,7 @@ const Settings: React.FC = () => {
     });
 
     return unregister;
-  }, [activeSubPage, legal, showArchiveModal, showArchivedList, showTimetableShare, pinModalMode, modal]);
+  }, [activeSubPage, legal, showArchiveModal, showArchivedList, pinModalMode, modal]);
 
   const handleShare = async () => {
     try {
@@ -207,15 +201,15 @@ const Settings: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pb-28">
+    <div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-100 p-5 pb-28">
       {/* ── ROOT SETTINGS DASHBOARD ── */}
       {activeSubPage === null && (
         <div className="space-y-6 animate-in fade-in duration-150">
           <header className="space-y-3">
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Settings</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mt-1">
-                Configuration &amp; Academic Preferences
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Settings</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                Configuration &amp; Preferences
               </p>
             </div>
 
@@ -229,12 +223,12 @@ const Settings: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search settings (e.g. pin, theme, holiday, backup)..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500 transition-colors"
+                className="neu-input w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-full"
+                  className="neu-flat-sm absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-0.5 rounded-full cursor-pointer"
                 >
                   Clear
                 </button>
@@ -248,15 +242,15 @@ const Settings: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
                 Academic & Schedule
               </span>
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+              <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* Academic & Goals */}
                 {(!searchQuery || 'academic thresholds target goal semester attendance buffer'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('academic')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-blue-600 dark:text-blue-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
@@ -264,7 +258,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">Academic &amp; Thresholds</p>
-                          <span className="bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          <span className="neu-flat-sm text-blue-600 dark:text-blue-400 text-[10px] font-black px-2.5 py-0.5 rounded-full">
                             {Math.round(settings.globalThreshold * 100)}%
                           </span>
                         </div>
@@ -281,10 +275,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'holidays breaks exam vacation exclusions presets ics'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('holidays')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -292,7 +286,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">College Holidays &amp; Breaks</p>
-                          <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          <span className="neu-flat-sm text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full">
                             {settings.holidays?.length || 0} Breaks
                           </span>
                         </div>
@@ -309,10 +303,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'sync calendar widgets ics google apple outlook lock screen'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('sync')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-purple-600 dark:text-purple-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
@@ -332,10 +326,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'subjects courses manage credits faculty room timetable'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('subjects')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
@@ -343,7 +337,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">Manage Subjects</p>
-                          <span className="bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          <span className="neu-flat-sm text-cyan-600 dark:text-cyan-400 text-[10px] font-black px-2.5 py-0.5 rounded-full">
                             {subjects.length} Courses
                           </span>
                         </div>
@@ -360,20 +354,20 @@ const Settings: React.FC = () => {
           )}
 
           {/* Group 2: System, Privacy & Alerts */}
-          {(!searchQuery || 'system notifications push alerts digest security pin lock passcode appearance theme colors oled dark data backup restore csv pdf archive'.includes(searchQuery.toLowerCase())) && (
+          {(!searchQuery || 'system notifications push alerts digest security pin lock passcode appearance theme colors dark data backup restore csv pdf archive'.includes(searchQuery.toLowerCase())) && (
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
                 System, Privacy &amp; Alerts
               </span>
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+              <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* Notifications */}
                 {(!searchQuery || 'notifications push alerts reminder pre-class morning digest sunday'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('notifications')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-amber-600 dark:text-amber-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
@@ -381,7 +375,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">Smart Notifications</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${settings.notificationsEnabled ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                          <span className={`neu-flat-sm text-[10px] font-black px-2.5 py-0.5 rounded-full ${settings.notificationsEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
                             {settings.notificationsEnabled ? 'Active' : 'Off'}
                           </span>
                         </div>
@@ -398,10 +392,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'security pin lock passcode protection privacy'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('security')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
@@ -409,7 +403,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">Security &amp; PIN Lock</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${settings.appLockEnabled ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                          <span className={`neu-flat-sm text-[10px] font-black px-2.5 py-0.5 rounded-full ${settings.appLockEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
                             {settings.appLockEnabled ? 'PIN Locked' : 'Unlocked'}
                           </span>
                         </div>
@@ -423,13 +417,13 @@ const Settings: React.FC = () => {
                 )}
 
                 {/* Appearance & Themes */}
-                {(!searchQuery || 'appearance theme dark light oled accent color palette haptics vibration'.includes(searchQuery.toLowerCase())) && (
+                {(!searchQuery || 'appearance theme dark light accent color palette haptics vibration'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('appearance')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-rose-600 dark:text-rose-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                         </svg>
@@ -437,7 +431,7 @@ const Settings: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-slate-900 dark:text-white">Appearance &amp; Themes</p>
-                          <span className="bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                          <span className="neu-flat-sm text-rose-600 dark:text-rose-400 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
                             {settings.theme}
                           </span>
                         </div>
@@ -454,10 +448,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'data backup restore csv pdf export archive reset clear json'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('data')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-600 dark:text-slate-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-slate-600 dark:text-slate-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                         </svg>
@@ -482,15 +476,15 @@ const Settings: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
                 Help, Support &amp; About
               </span>
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800 overflow-hidden shadow-sm">
+              <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* FAQ */}
                 {(!searchQuery || 'faq questions formulas guide attendance rules'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('faq')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-teal-600 dark:text-teal-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -510,10 +504,10 @@ const Settings: React.FC = () => {
                 {(!searchQuery || 'about support legal version rate share feedback github privacy terms'.includes(searchQuery.toLowerCase())) && (
                   <div
                     onClick={() => setActiveSubPage('about')}
-                    className="p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer active:scale-[0.99] transition-all"
+                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                      <div className="neu-flat-sm w-11 h-11 rounded-2xl text-sky-600 dark:text-sky-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -533,8 +527,8 @@ const Settings: React.FC = () => {
           )}
 
           {/* Unified Clean Footer */}
-          <footer className="pt-6 pb-2 text-center space-y-1.5 opacity-80">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 px-3 py-1 rounded-full">
+          <footer className="pt-6 pb-2 text-center space-y-2 opacity-90">
+            <div className="neu-flat-sm inline-flex items-center gap-2 px-3.5 py-1 rounded-full">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">BunkCalc v{APP_VERSION_NAME}</span>
             </div>
@@ -622,7 +616,6 @@ const Settings: React.FC = () => {
           archivedSemesters={archivedSemesters}
           deleteArchivedSemester={deleteArchivedSemester}
           onBack={() => setActiveSubPage(null)}
-          onOpenTimetableShare={() => setShowTimetableShare(true)}
           onOpenArchiveModal={() => setShowArchiveModal(true)}
           onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
         />
@@ -694,14 +687,6 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Timetable Share & Import Modal */}
-      {showTimetableShare && (
-        <TimetableShareModal 
-          isOpen={showTimetableShare}
-          onClose={() => setShowTimetableShare(false)}
-        />
       )}
 
       {/* AppModal Dialog */}

@@ -115,7 +115,7 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
   return (
     <div
       className={`
-        h-screen overflow-hidden w-full bg-slate-950 flex flex-col select-none
+        h-screen overflow-hidden w-full bg-[var(--neu-bg)] text-slate-900 dark:text-white flex flex-col select-none
         transition-opacity duration-700 ease-out
         ${mounted ? 'opacity-100' : 'opacity-0'}
       `}
@@ -151,8 +151,7 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
               <div className="flex-1 flex flex-col items-center justify-center max-w-xs">
                 {/* Decorative vector icon */}
                 <div className="relative mb-8">
-                  <div className="absolute inset-0 -m-6 rounded-full bg-blue-500/10 blur-3xl animate-pulse" />
-                  <div className="relative w-24 h-24 rounded-3xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shadow-2xl shadow-blue-500/20">
+                  <div className="relative w-24 h-24 rounded-3xl neu-card flex items-center justify-center text-blue-500">
                     {slide.iconType === 'book' && (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -173,18 +172,18 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
 
                 {/* Badge */}
                 {slide.badge && (
-                  <span className="inline-block mb-4 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 rounded-full ring-1 ring-blue-500/20">
+                  <span className="inline-block mb-4 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 neu-inset rounded-full">
                     {slide.badge}
                   </span>
                 )}
 
                 {/* Title */}
-                <h2 className="text-2xl font-black text-white mb-3 tracking-tight">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">
                   {slide.title}
                 </h2>
 
                 {/* Subtitle */}
-                <p className="text-slate-400 text-sm leading-relaxed">
+                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">
                   {slide.subtitle}
                 </p>
               </div>
@@ -194,18 +193,18 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
                 {slide.cta ? (
                   <button
                     onClick={onComplete}
-                    className="w-full max-w-xs bg-blue-600 hover:bg-blue-500 active:scale-[0.97] text-white font-black uppercase text-sm tracking-wider py-4 rounded-2xl shadow-xl shadow-blue-600/30 transition-all duration-200"
+                    className="w-full max-w-xs neu-btn-primary font-black uppercase text-sm tracking-wider py-4 rounded-2xl"
                   >
                     {slide.cta}
                   </button>
                 ) : (
                   /* Premium jumping/bouncing swipe hint */
                   <div className="flex flex-col items-center gap-1.5 cursor-pointer animate-bounce">
-                    <span className="text-[10px] font-black tracking-widest uppercase text-blue-400/80">
+                    <span className="text-[10px] font-black tracking-widest uppercase text-blue-500">
                       Swipe to continue
                     </span>
-                    <div className="flex items-center justify-center bg-slate-900/50 hover:bg-slate-900 border border-slate-800 rounded-full w-10 h-10 shadow-lg shadow-black/30 transition-colors">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex items-center justify-center neu-btn rounded-full w-10 h-10">
+                      <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
                     </div>
@@ -233,8 +232,8 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
               h-2 rounded-full transition-all duration-300 ease-out
               ${
                 idx === active
-                  ? 'w-8 bg-blue-500'
-                  : 'w-2 bg-slate-700 hover:bg-slate-600'
+                  ? 'w-8 bg-blue-600 shadow-md shadow-blue-500/40'
+                  : 'w-2 neu-inset opacity-70'
               }
             `}
           />

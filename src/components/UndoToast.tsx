@@ -20,7 +20,7 @@ const UndoToast: React.FC<Props> = ({ subjectName, status, onUndo, onDismiss }) 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
       onDismiss();
-    }, 4000);
+    }, 8000);
 
     return () => {
       if (timerRef.current) {
@@ -93,7 +93,7 @@ const UndoToast: React.FC<Props> = ({ subjectName, status, onUndo, onDismiss }) 
             <div
               className={`h-full rounded-b-2xl ${progressColor}`}
               style={{
-                animation: 'undoToastProgressShrink 4s linear forwards',
+                animation: 'undoToastProgressShrink 8s linear forwards',
               }}
             />
           </div>

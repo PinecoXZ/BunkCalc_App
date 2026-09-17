@@ -33,17 +33,22 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
 
       let advice: string;
       if (isCritical) {
-        advice = `Must attend all ${sessionsThisWeek} classes! Need ${stats.classesNeededToRecover} consecutive classes to recover above ${Math.round(thresholdPct)}%.`;
+        advice = subject.isLab
+          ? `Must attend all ${weeklySlotsCount} lab session(s)! Need ${stats.classesNeededToRecover} consecutive lab(s) to recover above ${Math.round(thresholdPct)}%.`
+          : `Must attend all ${sessionsThisWeek} classes! Need ${stats.classesNeededToRecover} consecutive classes to recover above ${Math.round(thresholdPct)}%.`;
       } else if (isRisky) {
-        advice = `Only ${stats.bunkBudget} bunk(s) remaining. Recommended to attend all classes this week.`;
+        const unit = subject.isLab ? (stats.bunkBudget === 1 ? 'lab' : 'labs') : (stats.bunkBudget === 1 ? 'bunk' : 'bunks');
+        advice = `Only ${stats.bunkBudget} ${unit} remaining. Recommended to attend all classes this week.`;
       } else {
-        const safeToBunkThisWeek = Math.min(stats.bunkBudget, sessionsThisWeek);
-        advice = `You have a comfortable buffer. Can safely skip up to ${safeToBunkThisWeek} class${safeToBunkThisWeek === 1 ? '' : 'es'} if needed.`;
+        const safeToBunkThisWeek = Math.min(stats.bunkBudget, subject.isLab ? weeklySlotsCount : sessionsThisWeek);
+        const unit = subject.isLab ? (safeToBunkThisWeek === 1 ? 'lab' : 'labs') : (safeToBunkThisWeek === 1 ? 'class' : 'classes');
+        advice = `You have a comfortable buffer. Can safely skip up to ${safeToBunkThisWeek} ${unit} if needed.`;
       }
 
       return {
         subject,
         stats,
+        weeklySlotsCount,
         sessionsThisWeek,
         isCritical,
         isRisky,
@@ -116,7 +121,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
 
         {/* Subject-wise breakdown */}
         <div className="p-5 overflow-y-auto flex-1 space-y-3.5">
-          {subjectStrategies.map(({ subject, stats, sessionsThisWeek, isCritical, isRisky, isSafe, advice }) => (
+          {subjectStrategies.map(({ subject, stats, weeklySlotsCount, sessionsThisWeek, isCritical, isRisky, isSafe, advice }) => (
             <div
               key={subject.id}
               className="neu-flat-sm p-4 rounded-2xl space-y-2.5"
@@ -132,7 +137,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
                     {subject.name} {subject.isLab ? '(Lab)' : ''}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    {sessionsThisWeek} classes this week &bull; Current: {stats.attendancePct.toFixed(1)}%
+                    {subject.isLab ? `${weeklySlotsCount} lab(s) (${sessionsThisWeek} hrs)` : `${sessionsThisWeek} classes`} this week &bull; Current: {stats.attendancePct.toFixed(1)}%
                   </p>
                 </div>
                 <span

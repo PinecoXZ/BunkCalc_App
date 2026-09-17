@@ -575,11 +575,11 @@ const TodayList: React.FC = () => {
                     </div>
                   ) : (
                     /* UNMARKED: 1-Tap Quick Action Buttons */
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={async () => await handleMark(subject.id, 'present', slotTime)}
                         title="Mark Present"
-                        className="neu-btn-present px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
+                        className="neu-btn-present px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -590,12 +590,23 @@ const TodayList: React.FC = () => {
                       <button
                         onClick={async () => await handleMark(subject.id, 'absent', slotTime)}
                         title="Mark Absent"
-                        className="neu-btn-absent px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
+                        className="neu-btn-absent px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         <span>Absent</span>
+                      </button>
+
+                      <button
+                        onClick={async () => await handleMark(subject.id, 'cancelled', slotTime)}
+                        title="Mark Cancelled"
+                        className="neu-btn px-2 sm:px-2.5 py-1.5 rounded-2xl text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                        <span>Cancel</span>
                       </button>
                     </div>
                   )}

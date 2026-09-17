@@ -91,7 +91,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       );
       totalAttended += stats.attendedCount;
       totalClasses += stats.totalClasses;
-      safeBunksTotal += stats.bunkBudget;
+      safeBunksTotal += Math.max(0, stats.bunkBudget);
       if (stats.bunkBudget < 0) {
         classesNeededTotal += stats.classesNeededToRecover;
       }

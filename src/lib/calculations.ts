@@ -28,6 +28,7 @@ export const calculateSubjectStats = (
   const multiplier = subject.isLab ? 2 : 1;
   const threshold = subject.threshold ?? 0.75;
 
+  // Past history is stored in session units per TRD §2 & §3
   const attendedSoFar = subject.attendedSoFar || 0;
   const missedSoFar = subject.missedSoFar || 0;
 
@@ -52,7 +53,15 @@ export const calculateSubjectStats = (
   );
 
   const requiredSessions = Math.ceil(totalSessions * threshold);
-  let bunkBudget = totalSessions - requiredSessions - totalMissed;
+  const sessionBudget = totalSessions - requiredSessions - totalMissed;
+
+  // Bunk budget in actual class bunks:
+  // For a theory class, 1 bunk = 1 session.
+  // For a lab class, 1 bunk = multiplier sessions (2 sessions).
+  // Math.floor(sessionBudget / multiplier) gives the exact number of classes a student can safely skip.
+  let bunkBudget = multiplier > 1
+    ? Math.floor(sessionBudget / multiplier)
+    : sessionBudget;
 
   if (!semesterEndDate && remainingClasses === 0) {
     bunkBudget = 0;
@@ -61,13 +70,17 @@ export const calculateSubjectStats = (
   // Current attendance %
   const attendancePct = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
 
-  // Classes needed to recover if below threshold or negative budget
+  // Classes needed to recover if below threshold or negative budget.
+  // Attending 1 class adds `multiplier` sessions to both attended and total.
+  // Formula: (totalAttended + m*k) / (totalClasses + m*k) >= threshold
+  // => k >= (threshold * totalMissed - totalAttended * (1 - threshold)) / (m * (1 - threshold))
   let classesNeededToRecover = 0;
   if (bunkBudget < 0 || attendancePct < threshold * 100) {
-    const denominator = 1 - threshold;
+    const denominator = multiplier * (1 - threshold);
     if (denominator > 0) {
       const numerator = threshold * totalMissed - totalAttended * (1 - threshold);
-      classesNeededToRecover = Math.max(0, Math.ceil(numerator / denominator));
+      // Epsilon adjustment / decimal rounding to prevent IEEE-754 precision drift (e.g. 1.000000000000001 -> ceil -> 2)
+      classesNeededToRecover = Math.max(0, Math.ceil(Number((numerator / denominator).toFixed(6))));
     } else {
       classesNeededToRecover = totalMissed > 0 ? 999 : 0;
     }

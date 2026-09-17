@@ -94,7 +94,7 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold">
-              {subject.credits} Credits • {stats.remainingClasses} remaining
+              {subject.credits} Credits • {subject.isLab ? `${Math.floor(stats.remainingClasses / 2)} labs remaining` : `${stats.remainingClasses} classes remaining`}
             </p>
             {subject.room && (
               <span className="neu-flat-sm text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
@@ -189,7 +189,7 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
                 Recover Next
               </p>
               <p className="text-lg font-black text-rose-600 dark:text-rose-400 leading-tight">
-                {stats.classesNeededToRecover} <span className="text-xs font-bold">classes</span>
+                {stats.classesNeededToRecover} <span className="text-xs font-bold">{subject.isLab ? (stats.classesNeededToRecover === 1 ? 'lab' : 'labs') : (stats.classesNeededToRecover === 1 ? 'class' : 'classes')}</span>
               </p>
             </>
           ) : (
@@ -204,7 +204,7 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
                   ? 'text-amber-500 dark:text-amber-400' 
                   : 'text-slate-500'
               }`}>
-                {stats.bunkBudget} <span className="text-xs font-bold">{stats.bunkBudget === 1 ? 'bunk' : 'bunks'}</span>
+                {stats.bunkBudget} <span className="text-xs font-bold">{subject.isLab ? (stats.bunkBudget === 1 ? 'lab' : 'labs') : (stats.bunkBudget === 1 ? 'bunk' : 'bunks')}</span>
               </p>
             </>
           )}

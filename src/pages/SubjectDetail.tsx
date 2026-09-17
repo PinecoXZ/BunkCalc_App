@@ -95,9 +95,15 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
         <div className="neu-card rounded-3xl p-5">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2">Bunk Budget</p>
           <p className={`text-3xl font-black tracking-tight ${projections.bunkBudget >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {projections.bunkBudget > 0 ? `+${projections.bunkBudget}` : projections.bunkBudget}
+            {projections.bunkBudget >= 0 
+              ? (projections.bunkBudget > 0 ? `+${projections.bunkBudget}` : '0') 
+              : projections.classesNeededToRecover}
           </p>
-          <p className="text-[10px] text-slate-400 font-bold mt-1">{projections.bunkBudget >= 0 ? 'Safe classes' : 'Classes to recover'}</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">
+            {projections.bunkBudget >= 0 
+              ? (currentSubject.isLab ? 'Safe labs' : 'Safe classes') 
+              : (currentSubject.isLab ? 'Labs to recover' : 'Classes to recover')}
+          </p>
         </div>
       </div>
 
@@ -114,7 +120,7 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
               <div>
                 <p className="text-sm font-bold text-rose-600 dark:text-rose-400">Recovery Mode</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                  Attend the next <span className="font-black text-rose-600 dark:text-rose-400 underline">{projections.classesNeededToRecover}</span> classes consecutively to reach {Math.round(currentSubject.threshold * 100)}%.
+                  Attend the next <span className="font-black text-rose-600 dark:text-rose-400 underline">{projections.classesNeededToRecover}</span> {currentSubject.isLab ? (projections.classesNeededToRecover === 1 ? 'lab' : 'labs') : (projections.classesNeededToRecover === 1 ? 'class' : 'classes')} consecutively to reach {Math.round(currentSubject.threshold * 100)}%.
                 </p>
               </div>
             </div>
@@ -129,7 +135,7 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
             <div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">Maximum Possible</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                If you attend all <span className="text-slate-900 dark:text-white font-bold">{projections.remainingClasses}</span> remaining classes, you'll reach <span className="text-blue-500 dark:text-blue-400 font-bold">{projections.maxPossiblePct.toFixed(1)}%</span>.
+                If you attend all <span className="text-slate-900 dark:text-white font-bold">{currentSubject.isLab ? Math.floor(projections.remainingClasses / 2) : projections.remainingClasses}</span> remaining {currentSubject.isLab ? 'labs' : 'classes'}, you'll reach <span className="text-blue-500 dark:text-blue-400 font-bold">{projections.maxPossiblePct.toFixed(1)}%</span>.
               </p>
             </div>
           </div>

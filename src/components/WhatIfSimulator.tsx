@@ -27,24 +27,27 @@ const WhatIfSimulator: React.FC = () => {
     );
 
     const multiplier = selectedSubject.isLab ? 2 : 1;
+    const threshold = selectedSubject.threshold ?? settings.globalThreshold ?? 0.75;
     const bunkSessions = bunkCount * multiplier;
 
     const simTotalAttended = currentStats.attendedCount;
     const simTotalMissed = currentStats.absentCount + bunkSessions;
     const simTotalClasses = simTotalAttended + simTotalMissed;
     const simRemainingClasses = Math.max(0, currentStats.remainingClasses - bunkSessions);
-    const simBunkBudget = currentStats.bunkBudget - bunkCount;
+    const simTotalSessions = Math.max(simTotalClasses, simTotalClasses + simRemainingClasses);
+    const simRequiredSessions = Math.ceil(simTotalSessions * threshold);
+    const simSessionBudget = simTotalSessions - simRequiredSessions - simTotalMissed;
+    const simBunkBudget = multiplier > 1 ? Math.floor(simSessionBudget / multiplier) : simSessionBudget;
     const simAttendancePct = simTotalClasses === 0 ? 100 : (simTotalAttended / simTotalClasses) * 100;
 
-    const threshold = selectedSubject.threshold || settings.globalThreshold;
     const isBelowThreshold = simAttendancePct < (threshold * 100) || simBunkBudget < 0;
 
     let simClassesNeededToRecover = 0;
     if (isBelowThreshold) {
-      const denominator = 1 - threshold;
+      const denominator = multiplier * (1 - threshold);
       if (denominator > 0) {
         const numerator = threshold * simTotalMissed - simTotalAttended * (1 - threshold);
-        simClassesNeededToRecover = Math.max(0, Math.ceil(numerator / denominator));
+        simClassesNeededToRecover = Math.max(0, Math.ceil(Number((numerator / denominator).toFixed(6))));
       }
     }
 
@@ -111,10 +114,10 @@ const WhatIfSimulator: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">
-                  Classes to Skip
+                  {selectedSubject.isLab ? 'Labs to Skip' : 'Classes to Skip'}
                 </label>
                 <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-purple-600 dark:text-purple-400">
-                  {bunkCount} {bunkCount === 1 ? 'class' : 'classes'}
+                  {bunkCount} {selectedSubject.isLab ? (bunkCount === 1 ? 'lab (2 hrs)' : 'labs') : (bunkCount === 1 ? 'class' : 'classes')}
                 </span>
               </div>
               <div className="neu-inset p-2 rounded-2xl">
@@ -128,7 +131,7 @@ const WhatIfSimulator: React.FC = () => {
                   aria-valuemin={1}
                   aria-valuemax={20}
                   aria-valuenow={bunkCount}
-                  aria-label="Number of classes to skip"
+                  aria-label={selectedSubject.isLab ? "Number of labs to skip" : "Number of classes to skip"}
                 />
               </div>
             </div>
@@ -166,7 +169,7 @@ const WhatIfSimulator: React.FC = () => {
                       </p>
                       <p className="text-xs text-rose-700/80 dark:text-rose-300/80 font-medium">
                         This drops you below {Math.round((selectedSubject?.threshold ?? settings.globalThreshold) * 100)}%. 
-                        You'll need to attend <span className="font-black underline">{simulation.simulatedStats.classesNeededToRecover}</span> classes consecutively to recover.
+                        You'll need to attend <span className="font-black underline">{simulation.simulatedStats.classesNeededToRecover}</span> {selectedSubject.isLab ? (simulation.simulatedStats.classesNeededToRecover === 1 ? 'lab' : 'labs') : (simulation.simulatedStats.classesNeededToRecover === 1 ? 'class' : 'classes')} consecutively to recover.
                       </p>
                     </div>
                   ) : (
@@ -179,7 +182,7 @@ const WhatIfSimulator: React.FC = () => {
                       </p>
                       <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 font-medium">
                         You will still be above the required {Math.round((selectedSubject?.threshold ?? settings.globalThreshold) * 100)}%. 
-                        Remaining budget: <span className="font-black">{simulation.simulatedStats.bunkBudget}</span> bunks.
+                        Remaining budget: <span className="font-black">{simulation.simulatedStats.bunkBudget}</span> {selectedSubject.isLab ? (simulation.simulatedStats.bunkBudget === 1 ? 'lab' : 'labs') : (simulation.simulatedStats.bunkBudget === 1 ? 'bunk' : 'bunks')}.
                       </p>
                     </div>
                   )}

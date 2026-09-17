@@ -275,7 +275,11 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
 
           <div className="neu-inset p-4 rounded-3xl space-y-3">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Mid-Semester History (Optional)</p>
-            <p className="text-[10px] text-slate-500 font-medium">Classes attended or missed prior to tracking with this app.</p>
+            <p className="text-[10px] text-slate-500 font-medium">
+              {isLab
+                ? 'Each lab counts as 2 sessions. Enter session hours attended/missed from your college portal.'
+                : 'Classes attended or missed prior to tracking with this app.'}
+            </p>
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Attended</label>

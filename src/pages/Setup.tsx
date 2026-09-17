@@ -330,7 +330,11 @@ const Setup: React.FC = () => {
 
               <div className="neu-inset p-4.5 rounded-2xl space-y-3">
                 <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Mid-Semester History (Optional)</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Fill this in if you already have past attendance history this semester.</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {isLab
+                    ? 'Each lab counts as 2 sessions. Enter session hours attended/missed from your college portal.'
+                    : 'Fill this in if you already have past attendance history this semester.'}
+                </p>
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Attended So Far</label>

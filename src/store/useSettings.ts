@@ -162,9 +162,6 @@ function applyTheme(theme: 'light' | 'dark' | 'system', accent: 'blue' | 'purple
     systemThemeMediaListener = null;
   }
 
-  // Ensure any legacy oled class is stripped
-  root.classList.remove('oled');
-
   if (theme === 'system') {
     const listener = (e: MediaQueryListEvent) => {
       const rootEl = window.document.documentElement;

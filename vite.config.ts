@@ -8,4 +8,21 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/@capacitor/') || id.includes('node_modules/@aparajita/')) {
+            return 'vendor-capacitor';
+          }
+          if (id.includes('node_modules/html2canvas/')) {
+            return 'vendor-html2canvas';
+          }
+        },
+      },
+    },
+  },
 })

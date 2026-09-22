@@ -53,15 +53,12 @@ export const calculateSubjectStats = (
   );
 
   const requiredSessions = Math.ceil(totalSessions * threshold);
-  const sessionBudget = totalSessions - requiredSessions - totalMissed;
 
   // Bunk budget in actual class bunks:
   // For a theory class, 1 bunk = 1 session.
   // For a lab class, 1 bunk = multiplier sessions (2 sessions).
   // Math.floor(sessionBudget / multiplier) gives the exact number of classes a student can safely skip.
-  let bunkBudget = multiplier > 1
-    ? Math.floor(sessionBudget / multiplier)
-    : sessionBudget;
+  let bunkBudget = calculateBunkBudget(totalSessions, totalMissed, threshold, multiplier);
 
   if (!semesterEndDate && remainingClasses === 0) {
     bunkBudget = 0;
@@ -71,19 +68,9 @@ export const calculateSubjectStats = (
   const attendancePct = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
 
   // Classes needed to recover if below threshold or negative budget.
-  // Attending 1 class adds `multiplier` sessions to both attended and total.
-  // Formula: (totalAttended + m*k) / (totalClasses + m*k) >= threshold
-  // => k >= (threshold * totalMissed - totalAttended * (1 - threshold)) / (m * (1 - threshold))
   let classesNeededToRecover = 0;
   if (bunkBudget < 0 || attendancePct < threshold * 100) {
-    const denominator = multiplier * (1 - threshold);
-    if (denominator > 0) {
-      const numerator = threshold * totalMissed - totalAttended * (1 - threshold);
-      // Epsilon adjustment / decimal rounding to prevent IEEE-754 precision drift (e.g. 1.000000000000001 -> ceil -> 2)
-      classesNeededToRecover = Math.max(0, Math.ceil(Number((numerator / denominator).toFixed(6))));
-    } else {
-      classesNeededToRecover = totalMissed > 0 ? 999 : 0;
-    }
+    classesNeededToRecover = calculateClassesNeededToRecover(totalAttended, totalMissed, threshold, multiplier);
   }
 
   // Max possible % if all remaining sessions are attended
@@ -109,6 +96,79 @@ export const calculateSubjectStats = (
   };
 };
 
+export const calculateBunkBudget = (
+  totalSessions: number,
+  totalMissed: number,
+  threshold: number,
+  multiplier: number = 1
+): number => {
+  const requiredSessions = Math.ceil(totalSessions * threshold);
+  const sessionBudget = totalSessions - requiredSessions - totalMissed;
+  return multiplier > 1 ? Math.floor(sessionBudget / multiplier) : sessionBudget;
+};
+
+export const calculateClassesNeededToRecover = (
+  totalAttended: number,
+  totalMissed: number,
+  threshold: number,
+  multiplier: number = 1
+): number => {
+  const denominator = multiplier * (1 - threshold);
+  if (denominator <= 0) {
+    return totalMissed > 0 ? 999 : 0;
+  }
+  const numerator = threshold * totalMissed - totalAttended * (1 - threshold);
+  // Epsilon adjustment / decimal rounding to prevent IEEE-754 precision drift (e.g. 1.000000000000001 -> ceil -> 2)
+  return Math.max(0, Math.ceil(Number((numerator / denominator).toFixed(6))));
+};
+
+export interface OverallStats {
+  percentage: number;
+  totalAttended: number;
+  totalClasses: number;
+  totalSafeBunks: number;
+  classesNeededTotal: number;
+  isSafe: boolean;
+  status: 'safe' | 'warning' | 'critical';
+}
+
+export const calculateOverallStats = (
+  subjects: Subject[],
+  records: AttendanceRecord[],
+  semesterEndDate: string,
+  holidays: Holiday[] = [],
+  globalThreshold: number = 0.75
+): OverallStats => {
+  let attended = 0;
+  let total = 0;
+  let bunks = 0;
+  let classesNeeded = 0;
+
+  subjects.forEach((s) => {
+    const stats = calculateSubjectStats(s, records, semesterEndDate, holidays);
+    attended += stats.attendedCount;
+    total += stats.totalClasses;
+    bunks += Math.max(0, stats.bunkBudget);
+    if (stats.bunkBudget < 0) {
+      classesNeeded += stats.classesNeededToRecover;
+    }
+  });
+
+  const percentage = total === 0 ? 100 : Math.round((attended / total) * 100);
+  const isSafe = percentage >= (globalThreshold * 100);
+  const status: 'safe' | 'warning' | 'critical' = percentage >= 85 ? 'safe' : percentage >= 75 ? 'warning' : 'critical';
+
+  return {
+    percentage,
+    totalAttended: attended,
+    totalClasses: total,
+    totalSafeBunks: bunks,
+    classesNeededTotal: classesNeeded,
+    isSafe,
+    status,
+  };
+};
+
 export const parseLocalDate = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
@@ -120,13 +180,6 @@ export const getStatusColor = (percentage: number, threshold: number = 0.75) => 
   if (percentage >= thresholdPct + 10) return 'text-green-500';
   if (percentage >= thresholdPct) return 'text-amber-500';
   return 'text-red-500';
-};
-
-export const getStatusBgColor = (percentage: number, threshold: number = 0.75) => {
-  const thresholdPct = threshold * 100;
-  if (percentage >= thresholdPct + 10) return 'bg-green-500';
-  if (percentage >= thresholdPct) return 'bg-amber-500';
-  return 'bg-red-500';
 };
 
 export interface WeekdayStat {

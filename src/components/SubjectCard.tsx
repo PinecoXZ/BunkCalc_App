@@ -10,9 +10,10 @@ interface Props {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  index?: number;
 }
 
-const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) => {
+const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete, index = 0 }) => {
   const { records } = useAttendance();
   const { settings } = useSettings();
   const [showMenu, setShowMenu] = React.useState(false);
@@ -23,6 +24,10 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
 
   const isRecoveryMode = stats.bunkBudget < 0;
   const isSafe = stats.attendancePct >= (subject.threshold * 100);
+  const isWarning = !isRecoveryMode && stats.bunkBudget <= 3 && stats.bunkBudget >= 0;
+
+  // Status stripe class
+  const stripeClass = isRecoveryMode ? 'card-stripe-danger' : isWarning ? 'card-stripe-warning' : 'card-stripe-safe';
 
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -68,11 +73,12 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete }) =>
   return (
     <div 
       onClick={handleCardClick}
-      className={`neu-card rounded-3xl p-5 active:scale-[0.985] transition-all duration-200 cursor-pointer relative overflow-hidden ${
+      className={`neu-card rounded-3xl p-5 active:scale-[0.985] transition-all duration-200 cursor-pointer relative overflow-hidden anim-stagger-in ${stripeClass} ${
         isRecoveryMode 
           ? 'border-rose-500/30' 
           : ''
       }`}
+      style={{ animationDelay: `${index * 60}ms` }}
     >
       {/* Top Header */}
       <div className="flex justify-between items-start mb-3">

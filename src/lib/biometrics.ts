@@ -1,6 +1,6 @@
-﻿import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth';
+import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth';
 
-export interface BiometricStatus {
+interface BiometricStatus {
   isAvailable: boolean;
   biometryType: 'fingerprint' | 'face' | 'none';
   reason?: string;

@@ -60,32 +60,25 @@ const SemesterProgress: React.FC<Props> = ({ semesterEndDate, records }) => {
   if (!progress) return null;
 
   return (
-    <div className="neu-card rounded-3xl p-5 mb-6">
-      <div className="flex justify-between items-end mb-3">
-        <div>
-          <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Semester Progress</h2>
-          <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-            {progress.isFinished ? 'Semester Completed' : `Day ${progress.elapsedDays} of ${progress.totalDays}`}
-          </p>
+    <div className="neu-flat-sm rounded-2xl px-4 py-3 mb-5 anim-fade-scale">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Semester</span>
+          <span className="text-[11px] font-black text-slate-800 dark:text-white">
+            {progress.isFinished ? 'Completed' : `Day ${progress.elapsedDays}/${progress.totalDays}`}
+          </span>
         </div>
         {!progress.isFinished && (
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Remaining</span>
-            <span className="text-xs font-extrabold text-blue-500">{progress.remainingWeeks} weeks</span>
-          </div>
+          <span className="text-[10px] font-bold text-blue-500">
+            {progress.remainingWeeks}w left • {Math.round(progress.percentage)}%
+          </span>
         )}
       </div>
-
-      <div className="h-2.5 w-full neu-inset rounded-full overflow-hidden p-0.5 relative">
+      <div className="h-1.5 w-full neu-inset rounded-full overflow-hidden p-px">
         <div 
           className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500"
           style={{ width: mounted ? `${progress.percentage}%` : '0%' }}
         />
-      </div>
-      <div className="mt-2.5 flex justify-end">
-        <span className="neu-flat-sm text-[10px] font-black px-2.5 py-0.5 rounded-full text-blue-600 dark:text-blue-400">
-          {Math.round(progress.percentage)}% Completed
-        </span>
       </div>
     </div>
   );

@@ -171,7 +171,7 @@ export const scheduleDailyClassReminders = async (
 /**
  * Cancel any pending pre-class and post-class notification for a subject today once attendance is marked
  */
-export const cancelTodayClassReminders = async (subjectId: string) => {
+const cancelTodayClassReminders = async (subjectId: string) => {
   try {
     const pending = await LocalNotifications.getPending();
     const toCancel = pending.notifications
@@ -192,7 +192,7 @@ export const cancelTodayClassReminders = async (subjectId: string) => {
   }
 };
 
-export const cancelPostClassReminder = cancelTodayClassReminders;
+const cancelPostClassReminder = cancelTodayClassReminders;
 
 /**
  * 2 & 3. Threshold and Bunk Budget Warning Alerts

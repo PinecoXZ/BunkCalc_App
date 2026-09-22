@@ -54,7 +54,7 @@ export const BunkMeter: React.FC<BunkMeterProps> = ({
   const innerDiscSize = size - strokeWidth * 2 - 12;
 
   return (
-    <div className="neu-card rounded-3xl p-6 flex flex-col items-center justify-center transition-all">
+    <div className="neu-card rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center transition-all anim-fade-scale">
       <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
         {/* Glow background effect */}
         <div 

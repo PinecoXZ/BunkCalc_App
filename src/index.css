@@ -3,18 +3,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
-   NEUMORPHISM (SOFT UI 2.0) DESIGN SYSTEM
+   NEUMORPHISM + GLASSMORPHISM DESIGN SYSTEM v2
+   Dark mode: deep neumorphic    |    Light mode: frosted glass
    ========================================================================== */
 
 :root {
-  --neu-bg: #e8ecf4;
-  --neu-surface: #e8ecf4;
-  --neu-surface-inset: #e1e7f0;
-  --neu-border: rgba(255, 255, 255, 0.65);
-  --neu-shadow-dark: rgba(166, 180, 200, 0.72);
-  --neu-shadow-light: rgba(255, 255, 255, 0.95);
-  --neu-inset-dark: rgba(166, 180, 200, 0.6);
-  --neu-inset-light: rgba(255, 255, 255, 0.9);
+  --neu-bg: #eef1f7;
+  --neu-surface: rgba(255, 255, 255, 0.65);
+  --neu-surface-inset: rgba(215, 222, 235, 0.5);
+  --neu-border: rgba(255, 255, 255, 0.8);
+  --neu-shadow-dark: rgba(166, 180, 200, 0.45);
+  --neu-shadow-light: rgba(255, 255, 255, 0.85);
+  --neu-inset-dark: rgba(166, 180, 200, 0.35);
+  --neu-inset-light: rgba(255, 255, 255, 0.75);
 
   /* Default Blue Accent */
   --neu-accent: #2563eb;
@@ -24,14 +25,14 @@
 }
 
 .dark {
-  --neu-bg: #181c24;
-  --neu-surface: #181c24;
-  --neu-surface-inset: #13161d;
-  --neu-border: rgba(255, 255, 255, 0.05);
-  --neu-shadow-dark: rgba(0, 0, 0, 0.68);
-  --neu-shadow-light: rgba(255, 255, 255, 0.038);
-  --neu-inset-dark: rgba(0, 0, 0, 0.75);
-  --neu-inset-light: rgba(255, 255, 255, 0.035);
+  --neu-bg: #0f1218;
+  --neu-surface: rgba(22, 27, 36, 0.9);
+  --neu-surface-inset: rgba(14, 17, 24, 0.85);
+  --neu-border: rgba(255, 255, 255, 0.06);
+  --neu-shadow-dark: rgba(0, 0, 0, 0.6);
+  --neu-shadow-light: rgba(255, 255, 255, 0.03);
+  --neu-inset-dark: rgba(0, 0, 0, 0.65);
+  --neu-inset-light: rgba(255, 255, 255, 0.03);
 }
 
 /* Dynamic Accent Themes */
@@ -128,28 +129,41 @@ body {
 }
 
 /* ==========================================================================
-   NEUMORPHIC UTILITIES
+   GLASSMORPHIC / NEUMORPHIC UTILITIES
    ========================================================================== */
 
-/* Raised Surface / Card */
+/* Raised Surface / Card — frosted glass in light, deep neu in dark */
 .neu-card,
 .neu-flat {
   background-color: var(--neu-surface);
-  box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 4px 24px var(--neu-shadow-dark), 0 1px 0 var(--neu-shadow-light) inset;
   border: 1px solid var(--neu-border);
+}
+
+.dark .neu-card,
+.dark .neu-flat {
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: 0 6px 20px var(--neu-shadow-dark), 0 1px 0 var(--neu-shadow-light) inset;
 }
 
 /* Raised Small / Badges / Subtle Items */
 .neu-flat-sm {
   background-color: var(--neu-surface);
-  box-shadow: 3px 3px 8px var(--neu-shadow-dark), -3px -3px 8px var(--neu-shadow-light);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 2px 10px var(--neu-shadow-dark);
   border: 1px solid var(--neu-border);
 }
 
 /* Raised Floating / High Elevation */
 .neu-float {
   background-color: var(--neu-surface);
-  box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow: 0 8px 32px var(--neu-shadow-dark), 0 1px 0 var(--neu-shadow-light) inset;
   border: 1px solid var(--neu-border);
 }
 
@@ -157,7 +171,7 @@ body {
 .neu-inset,
 .neu-pressed {
   background-color: var(--neu-surface-inset);
-  box-shadow: inset 3px 3px 7px var(--neu-inset-dark), inset -3px -3px 7px var(--neu-inset-light);
+  box-shadow: inset 2px 2px 6px var(--neu-inset-dark), inset -2px -2px 6px var(--neu-inset-light);
   border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -169,7 +183,9 @@ body {
 /* Tactile Interactive Button */
 .neu-btn {
   background-color: var(--neu-surface);
-  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 3px 12px var(--neu-shadow-dark), 0 1px 0 var(--neu-shadow-light) inset;
   border: 1px solid var(--neu-border);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -177,7 +193,7 @@ body {
 
 .neu-btn:active,
 .neu-btn.active {
-  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light);
+  box-shadow: inset 2px 2px 5px var(--neu-inset-dark), inset -2px -2px 5px var(--neu-inset-light);
   transform: scale(0.98);
 }
 
@@ -185,7 +201,7 @@ body {
 .neu-btn-primary {
   background: linear-gradient(135deg, var(--neu-accent-light) 0%, var(--neu-accent) 100%);
   color: #ffffff;
-  box-shadow: 5px 5px 12px var(--neu-accent-glow), -3px -3px 8px var(--neu-shadow-light);
+  box-shadow: 0 4px 16px var(--neu-accent-glow), 0 1px 0 rgba(255,255,255,0.15) inset;
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -200,7 +216,7 @@ body {
 .neu-btn-present {
   background: var(--neu-surface);
   color: #10b981;
-  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  box-shadow: 0 3px 12px var(--neu-shadow-dark);
   border: 1px solid var(--neu-border);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -214,7 +230,7 @@ body {
 .neu-btn-absent {
   background: var(--neu-surface);
   color: #f43f5e;
-  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  box-shadow: 0 3px 12px var(--neu-shadow-dark);
   border: 1px solid var(--neu-border);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -227,20 +243,22 @@ body {
 /* Neumorphic Input Well */
 .neu-input {
   background-color: var(--neu-surface-inset);
-  box-shadow: inset 3px 3px 7px var(--neu-inset-dark), inset -3px -3px 7px var(--neu-inset-light);
+  box-shadow: inset 2px 2px 6px var(--neu-inset-dark), inset -2px -2px 6px var(--neu-inset-light);
   border: 1px solid rgba(0, 0, 0, 0.05);
   outline: none;
   transition: all 0.2s ease;
 }
 .neu-input:focus {
   border-color: var(--neu-accent);
-  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light), 0 0 0 3px var(--neu-accent-focus);
+  box-shadow: inset 2px 2px 5px var(--neu-inset-dark), inset -2px -2px 5px var(--neu-inset-light), 0 0 0 3px var(--neu-accent-focus);
 }
 
 /* Neumorphic Filter Chip */
 .neu-chip {
   background-color: var(--neu-surface);
-  box-shadow: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px var(--neu-shadow-dark);
   border: 1px solid var(--neu-border);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -250,7 +268,7 @@ body {
 }
 .neu-chip-active {
   background-color: var(--neu-surface-inset);
-  box-shadow: inset 3px 3px 6px var(--neu-inset-dark), inset -3px -3px 6px var(--neu-inset-light);
+  box-shadow: inset 2px 2px 5px var(--neu-inset-dark), inset -2px -2px 5px var(--neu-inset-light);
   border: 1px solid var(--neu-accent);
   color: var(--neu-accent);
 }
@@ -258,6 +276,85 @@ body {
 /* Neumorphic Floating Bottom Dock */
 .neu-dock {
   background-color: var(--neu-surface);
-  box-shadow: 0 -4px 20px var(--neu-shadow-dark), 0 -1px 4px var(--neu-shadow-light);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 -4px 24px var(--neu-shadow-dark);
   border-top: 1px solid var(--neu-border);
+}
+
+/* ==========================================================================
+   STATUS ACCENT STRIPE — Left-border colored stripe on cards
+   ========================================================================== */
+
+.card-stripe-safe {
+  border-left: 3px solid #10b981;
+}
+.card-stripe-warning {
+  border-left: 3px solid #f59e0b;
+}
+.card-stripe-danger {
+  border-left: 3px solid #f43f5e;
+}
+
+/* Danger card glow in dark mode */
+.dark .card-stripe-danger {
+  box-shadow: 0 4px 20px var(--neu-shadow-dark), -4px 0 20px rgba(244, 63, 94, 0.08);
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.3; }
+}
+
+.anim-stagger-in {
+  animation: stagger-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-slide-up {
+  animation: slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-fade-scale {
+  animation: fade-scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }

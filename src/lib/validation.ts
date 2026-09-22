@@ -274,7 +274,7 @@ function validateArchivedSemester(sem: unknown): { valid: boolean; data?: Archiv
   };
 }
 
-export interface ValidatedImportPayload {
+interface ValidatedImportPayload {
   subjects: Subject[];
   attendance: AttendanceRecord[];
   settings?: AppSettings;

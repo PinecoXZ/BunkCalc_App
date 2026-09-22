@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSubjectStats, calculateWeekdayStats } from '../calculations';
+import { 
+  calculateSubjectStats, 
+  calculateWeekdayStats,
+  calculateOverallStats,
+  calculateBunkBudget,
+  calculateClassesNeededToRecover
+} from '../calculations';
 import type { Subject, AttendanceRecord } from '../types';
 
 describe('BunkCalc Calculation Engine (TRD §3)', () => {
@@ -226,6 +232,53 @@ describe('BunkCalc Calculation Engine (TRD §3)', () => {
       expect(monday?.cancelled).toBe(1);
       expect(monday?.total).toBe(2);
       expect(monday?.percentage).toBe(50);
+    });
+  });
+
+  describe('Consolidated Overall Stats & Formula Helpers', () => {
+    it('accurately calculates overall stats across multiple subjects', () => {
+      const sub1 = createSubject({ id: 'sub-1', attendedSoFar: 10, missedSoFar: 2 });
+      const sub2 = createSubject({ id: 'sub-2', attendedSoFar: 8, missedSoFar: 0 });
+      // Total attended = 18, Total classes = 20 -> 90%
+      const overall = calculateOverallStats([sub1, sub2], [], '', [], 0.75);
+
+      expect(overall.totalAttended).toBe(18);
+      expect(overall.totalClasses).toBe(20);
+      expect(overall.percentage).toBe(90);
+      expect(overall.isSafe).toBe(true);
+      expect(overall.status).toBe('safe');
+    });
+
+    it('identifies warning status when overall percentage is between 75% and 84%', () => {
+      const sub1 = createSubject({ id: 'sub-1', attendedSoFar: 8, missedSoFar: 2 }); // 80%
+      const overall = calculateOverallStats([sub1], [], '', [], 0.75);
+
+      expect(overall.percentage).toBe(80);
+      expect(overall.isSafe).toBe(true);
+      expect(overall.status).toBe('warning');
+    });
+
+    it('identifies critical status when overall percentage is below 75%', () => {
+      const sub1 = createSubject({ id: 'sub-1', attendedSoFar: 5, missedSoFar: 5 }); // 50%
+      const overall = calculateOverallStats([sub1], [], '', [], 0.75);
+
+      expect(overall.percentage).toBe(50);
+      expect(overall.isSafe).toBe(false);
+      expect(overall.status).toBe('critical');
+    });
+
+    it('correctly computes bunk budget via helper', () => {
+      // 100 sessions, 0 missed, 75% threshold -> 75 required -> 25 safe bunks
+      expect(calculateBunkBudget(100, 0, 0.75, 1)).toBe(25);
+      // For lab multiplier 2: 25 / 2 = 12 lab bunks
+      expect(calculateBunkBudget(100, 0, 0.75, 2)).toBe(12);
+    });
+
+    it('correctly computes classes needed to recover via helper', () => {
+      // 3 attended, 1 missed, 80% threshold (75% current) -> 1 class needed to reach 80%
+      expect(calculateClassesNeededToRecover(3, 1, 0.8, 1)).toBe(1);
+      // Lab multiplier 2: 4 attended, 2 missed, 80% threshold -> 2 labs needed
+      expect(calculateClassesNeededToRecover(4, 2, 0.8, 2)).toBe(2);
     });
   });
 });

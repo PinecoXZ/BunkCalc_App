@@ -1,9 +1,9 @@
-import { calculateSubjectStats } from './calculations';
+import { calculateOverallStats } from './calculations';
 import { saveToStorage } from './storage';
 import { toISODateStr } from './dateUtils';
 import type { Subject, AttendanceRecord, AppSettings, WidgetSyncData, WidgetClassItem } from './types';
 
-export const calculateWidgetData = (
+const calculateWidgetData = (
   subjects: Subject[],
   records: AttendanceRecord[],
   settings: AppSettings
@@ -15,19 +15,17 @@ export const calculateWidgetData = (
   const currentTimeVal = currentHours * 60 + currentMinutes;
   const todayStr = toISODateStr(now);
 
-  let totalAttended = 0;
-  let totalPossible = 0;
-  let totalSafeBunks = 0;
+  const overall = calculateOverallStats(
+    subjects,
+    records,
+    settings.semesterEndDate,
+    settings.holidays,
+    settings.globalThreshold
+  );
 
-  subjects.forEach((s) => {
-    const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
-    totalAttended += stats.attendedCount;
-    totalPossible += stats.totalClasses;
-    totalSafeBunks += Math.max(0, stats.bunkBudget);
-  });
-
-  const overallPercentage = totalPossible === 0 ? 100 : (totalAttended / totalPossible) * 100;
-  const isSafe = overallPercentage >= (settings.globalThreshold * 100);
+  const overallPercentage = overall.percentage;
+  const isSafe = overall.isSafe;
+  const totalSafeBunks = overall.totalSafeBunks;
   const statusColorHex = overallPercentage >= 85 ? '#22c55e' : overallPercentage >= 75 ? '#f59e0b' : '#ef4444';
 
   // Check today's classes

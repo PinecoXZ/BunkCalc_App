@@ -194,7 +194,7 @@ function App() {
   // If data hasn't loaded yet AND splash finished, show a minimal loader
   if (!dataReady && !showSplash) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#e8ecf4] dark:bg-[#181c24] text-slate-900 dark:text-white gap-6 p-8">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#eef1f7] dark:bg-[#0f1218] text-slate-900 dark:text-white gap-6 p-8">
         <div className="text-2xl font-bold animate-pulse italic text-blue-500">BunkCalc</div>
       </div>
     );
@@ -213,7 +213,7 @@ function App() {
               opacity: homeVisible ? 1 : 0,
               transition: 'opacity 300ms ease-in',
             }}
-            className="min-h-screen bg-[#e8ecf4] dark:bg-[#181c24] text-slate-800 dark:text-slate-100 transition-colors duration-300 pb-24"
+            className="min-h-screen bg-[#eef1f7] dark:bg-[#0f1218] text-slate-800 dark:text-slate-100 transition-colors duration-300 pb-24"
           >
             <Suspense fallback={<div className="p-6"><SkeletonLoader height="h-64" /></div>}>
               {showOnboarding && subjects.length === 0 ? (

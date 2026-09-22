@@ -67,7 +67,7 @@ export const parseICSFile = (icsText: string): Holiday[] => {
   return holidays;
 };
 
-export interface HolidayPreset {
+interface HolidayPreset {
   name: string;
   category: string;
   holidays: Array<{

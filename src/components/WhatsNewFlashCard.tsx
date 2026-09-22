@@ -38,21 +38,21 @@ export const WhatsNewFlashCard: React.FC<Props> = ({ isOpen, onClose }) => {
 
         {/* Feature list */}
         <div className="p-5 overflow-y-auto flex-1 space-y-3.5 text-xs">
+          <div className="neu-flat-sm p-3.5 rounded-2xl border border-blue-500/20">
+            <p className="font-bold text-blue-600 dark:text-blue-400 text-sm mb-1">
+              Frosted Glass UI &amp; Status Stripes (v2.2.5)
+            </p>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Refined Light Mode with clean frosted glassmorphism, instant visual left-border status stripes on cards, compact semester progress, and staggered entrance animations.
+            </p>
+          </div>
+
           <div className="neu-flat-sm p-3.5 rounded-2xl border border-purple-500/20">
             <p className="font-bold text-purple-600 dark:text-purple-400 text-sm mb-1">
               Lab Multiplier &amp; Precision Hardening
             </p>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              2-hour practical labs now compute exact safe lab bunks, recovery requirements, and ERP session credits with zero-drift floating point precision.
-            </p>
-          </div>
-
-          <div className="neu-flat-sm p-3.5 rounded-2xl">
-            <p className="font-bold text-slate-900 dark:text-white text-sm mb-1">
-              Neumorphism (Soft UI 2.0) Design
-            </p>
-            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Complete tactile overhaul with extruded cards, sunken wells, and dual-shadow physics in both Light and Dark themes.
+              2-hour practical labs compute exact safe lab bunks, recovery requirements, and ERP session credits with zero-drift floating point precision.
             </p>
           </div>
 

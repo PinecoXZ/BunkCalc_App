@@ -1,4 +1,4 @@
-﻿import type { Subject, AppSettings } from './types';
+import type { Subject, AppSettings } from './types';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
@@ -18,7 +18,7 @@ const formatICSDate = (date: Date): string => {
 /**
  * Builds standard RFC 5545 iCalendar (.ics) string representing the recurring timetable schedule.
  */
-export const generateTimetableICS = (
+const generateTimetableICS = (
   subjects: Subject[],
   settings: AppSettings
 ): string => {

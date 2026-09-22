@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "2.2.4",
+  "versionCode": 12,
+  "versionName": "2.2.5",
   "apkUrl": "https://bunk-calc-web.vercel.app/bunkcalc.apk",
-  "changelog": "v2.2.4: Hardened calculation engine with accurate lab multiplier (2-hour safe bunks and recovery formula), floating-point precision guards, 1-tap cancellation, and extended undo window."
+  "changelog": "v2.2.5: UI polish with frosted glassmorphism light mode, card status accent stripes, compact semester progress, and smoother entrance animations."
 }

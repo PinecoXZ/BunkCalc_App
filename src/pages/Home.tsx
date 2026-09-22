@@ -246,7 +246,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       <div className="-mx-4 -mt-4 mb-4">
         <UpdateBanner />
       </div>
-      <header className="mb-6 flex justify-between items-center">
+      <header className="mb-5 flex justify-between items-center anim-fade-scale">
         <div>
           <h1 className="text-3xl font-black text-blue-500 italic uppercase tracking-tight">BunkCalc</h1>
           <div className="text-slate-500 dark:text-slate-400 text-xs font-black tracking-widest flex items-center gap-1">
@@ -349,7 +349,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
 
           {/* Animated Bunk Meter Component */}
           {subjects.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-5">
               <BunkMeter
                 percentage={overallStats.percentage}
                 safeBunksTotal={overallStats.safeBunksTotal}
@@ -514,7 +514,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             )}
 
             {/* Subject Cards Grid */}
-            <div className="grid gap-4">
+            <div className="grid gap-3.5">
               {filteredAndSortedSubjects.length === 0 ? (
                 <div className="neu-card rounded-3xl p-8 text-center space-y-2">
                   <div className="neu-inset w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
@@ -537,10 +537,11 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                   )}
                 </div>
               ) : (
-                filteredAndSortedSubjects.map((subject) => (
+                filteredAndSortedSubjects.map((subject, idx) => (
                   <SubjectCard
                     key={subject.id}
                     subject={subject}
+                    index={idx}
                     onClick={() => onSelectSubject(subject)}
                     onEdit={() => handleEditClick(subject)}
                     onDelete={() => handleDeleteSubject(subject.id, subject.name)}

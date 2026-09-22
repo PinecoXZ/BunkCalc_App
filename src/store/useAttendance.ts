@@ -164,6 +164,18 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     const settings = useSettings.getState().settings;
     if (subjects.length === 0 || records.length === 0) return 0;
 
+    // Index records by date -> subjectId -> status for O(1) lookups
+    const recordsByDate = new Map<string, Map<string, AttendanceRecord['status']>>();
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      let dayMap = recordsByDate.get(r.date);
+      if (!dayMap) {
+        dayMap = new Map();
+        recordsByDate.set(r.date, dayMap);
+      }
+      dayMap.set(r.subjectId, r.status);
+    }
+
     // Walk backwards from today counting consecutive days where ALL scheduled classes were 'present' (skip 'cancelled' and 'holidays')
     const now = new Date();
     let streak = 0;
@@ -187,10 +199,10 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       if (scheduledSubjects.length === 0) continue;
 
       // Check attendance for each scheduled subject on this date
-      const dayRecords = records.filter(r => r.date === dateStr);
+      const dayMap = recordsByDate.get(dateStr);
       
       // If no records at all for today (today might not have started yet)
-      if (dayRecords.length === 0) {
+      if (!dayMap || dayMap.size === 0) {
         if (daysBack === 0) continue; // Today hasn't been marked yet, skip
         break; // Past day with no records = missed
       }
@@ -200,13 +212,13 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       let unmarkedCount = 0;
 
       for (const sub of scheduledSubjects) {
-        const rec = dayRecords.find(r => r.subjectId === sub.id);
-        if (!rec) {
+        const status = dayMap.get(sub.id);
+        if (!status) {
           unmarkedCount++;
-        } else if (rec.status === 'absent') {
+        } else if (status === 'absent') {
           hasAbsent = true;
           break;
-        } else if (rec.status === 'present') {
+        } else if (status === 'present') {
           hasPresent = true;
         }
       }

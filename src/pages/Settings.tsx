@@ -2,15 +2,11 @@ import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { useSettings } from '../store/useSettings';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
-import { saveToStorage } from '../lib/storage';
 import ThemedIcon from '../components/ThemedIcon';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { v4 as uuidv4 } from 'uuid';
-import type { ArchivedSemester } from '../lib/types';
-import { calculateSubjectStats } from '../lib/calculations';
 import { AppModal } from '../components/AppModal';
-import { sanitizeName, validateArchiveName } from '../lib/validation';
 import { PinSetupModal } from '../components/PinSetupModal';
+import { ArchiveSemesterModal } from '../components/settings/ArchiveSemesterModal';
 import { APP_VERSION_NAME } from '../lib/constants';
 import { registerBackHandler } from '../lib/backHandler';
 
@@ -53,8 +49,6 @@ const Settings: React.FC = () => {
 
   const [legal, setLegal] = useState<{ title: string; type: 'privacy' | 'terms' } | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [archiveName, setArchiveName] = useState('');
-  const [showArchivedList, setShowArchivedList] = useState(false);
 
   // AppModal State
   const [modal, setModal] = useState<{
@@ -70,7 +64,7 @@ const Settings: React.FC = () => {
 
   // Hardware Back Button listener for subpages & modals in Settings
   useEffect(() => {
-    if (!activeSubPage && !legal && !showArchiveModal && !pinModalMode && !modal && !showArchivedList) {
+    if (!activeSubPage && !legal && !showArchiveModal && !pinModalMode && !modal) {
       return;
     }
 
@@ -87,10 +81,6 @@ const Settings: React.FC = () => {
         setShowArchiveModal(false);
         return true;
       }
-      if (showArchivedList) {
-        setShowArchivedList(false);
-        return true;
-      }
       if (pinModalMode) {
         setPinModalMode(null);
         return true;
@@ -103,7 +93,7 @@ const Settings: React.FC = () => {
     });
 
     return unregister;
-  }, [activeSubPage, legal, showArchiveModal, showArchivedList, pinModalMode, modal]);
+  }, [activeSubPage, legal, showArchiveModal, pinModalMode, modal]);
 
   const handleShare = async () => {
     try {
@@ -147,56 +137,6 @@ const Settings: React.FC = () => {
       },
       onCancel: () => setModal(null)
     });
-  };
-
-
-  const handleArchiveSemester = async () => {
-    const sanitized = sanitizeName(archiveName);
-    const validation = validateArchiveName(sanitized);
-    if (!validation.valid) {
-      setModal({
-        isOpen: true,
-        title: "Archive Failed",
-        message: validation.error || "Please enter a valid semester name.",
-        type: "error",
-        confirmText: "OK",
-        onConfirm: () => setModal(null)
-      });
-      return;
-    }
-    if (subjects.length === 0) {
-      setModal({
-        isOpen: true,
-        title: "Archive Failed",
-        message: "No subjects to archive.",
-        type: "error",
-        confirmText: "OK",
-        onConfirm: () => setModal(null)
-      });
-      return;
-    }
-
-    const totalAttended = subjects.reduce((acc, s) => acc + calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays).attendedCount, 0);
-    const totalClasses = subjects.reduce((acc, s) => acc + calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays).totalClasses, 0);
-    const overallPct = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
-
-    const archived: ArchivedSemester = {
-      id: uuidv4(),
-      name: sanitized,
-      endDate: settings.semesterEndDate,
-      archivedAt: new Date().toISOString(),
-      subjects: [...subjects],
-      records: [...records],
-      overallPct,
-    };
-
-    await archiveSemester(archived);
-    // Clear current subjects and records
-    await saveToStorage('subjects', []);
-    await saveToStorage('attendance_records', []);
-    setShowArchiveModal(false);
-    setArchiveName('');
-    window.location.reload();
   };
 
 
@@ -658,36 +598,24 @@ const Settings: React.FC = () => {
       )}
 
       {/* Archive Semester Modal */}
-      {showArchiveModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Archive Current Semester</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Save your current attendance records and subjects into your archive history, then start a fresh semester.
-            </p>
-            <input 
-              placeholder="e.g. 5th Semester (Autumn 2026)"
-              value={archiveName}
-              onChange={(e) => setArchiveName(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-            />
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowArchiveModal(false)}
-                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-xl text-xs font-bold"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleArchiveSemester}
-                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20"
-              >
-                Archive &amp; Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ArchiveSemesterModal
+        isOpen={showArchiveModal}
+        subjects={subjects}
+        records={records}
+        settings={settings}
+        onArchive={archiveSemester}
+        onClose={() => setShowArchiveModal(false)}
+        onError={(title, message) => {
+          setModal({
+            isOpen: true,
+            title,
+            message,
+            type: 'error',
+            confirmText: 'OK',
+            onConfirm: () => setModal(null),
+          });
+        }}
+      />
 
       {/* AppModal Dialog */}
       {modal && (

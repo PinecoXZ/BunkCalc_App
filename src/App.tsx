@@ -27,6 +27,7 @@ const OnboardingCarousel = lazy(() => import('./components/OnboardingCarousel'))
 const CalendarView = lazy(() => import('./pages/CalendarView'));
 import { WhatsNewFlashCard } from './components/WhatsNewFlashCard';
 import { AppLockModal } from './components/AppLockModal';
+import { UpdateBanner } from './components/UpdateBanner';
 import { executeBackHandler } from './lib/backHandler';
 import { APP_VERSION_NAME } from './lib/constants';
 
@@ -171,6 +172,40 @@ function App() {
     };
   }, [loadSettings, loadSubjects, loadRecords, loadArchivedSemesters]);
 
+  // ── App Lock Background / Resume Lifecycle ──
+  useEffect(() => {
+    if (!settings?.appLockEnabled || !settings?.appLockPin) {
+      return;
+    }
+
+    let stateListener: { remove: () => Promise<void> } | null = null;
+    const setupAppStateListener = async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        stateListener = await CapApp.addListener('appStateChange', (state) => {
+          if (!state.isActive && settings?.appLockEnabled && settings?.appLockPin) {
+            setIsAppLocked(true);
+          }
+        });
+      } catch (err) {
+        console.warn('Native appStateChange listener not supported:', err);
+      }
+    };
+    setupAppStateListener();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && settings?.appLockEnabled && settings?.appLockPin) {
+        setIsAppLocked(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (stateListener) stateListener.remove();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [settings?.appLockEnabled, settings?.appLockPin]);
+
   // ── Splash complete callback ──
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
@@ -215,6 +250,7 @@ function App() {
             }}
             className="min-h-screen bg-[#eef1f7] dark:bg-[#0f1218] text-slate-800 dark:text-slate-100 transition-colors duration-300 pb-24"
           >
+            <UpdateBanner />
             <Suspense fallback={<div className="p-6"><SkeletonLoader height="h-64" /></div>}>
               {showOnboarding && subjects.length === 0 ? (
                 <OnboardingCarousel onComplete={() => setShowOnboarding(false)} />

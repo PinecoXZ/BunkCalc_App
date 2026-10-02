@@ -94,10 +94,9 @@ const generateTimetableICS = (
           const end = new Date(ey, em - 1, ed);
           while (cur <= end) {
             if (cur.getDay() === targetDay) {
-              const y = cur.getFullYear();
-              const m = String(cur.getMonth() + 1).padStart(2, '0');
-              const d = String(cur.getDate()).padStart(2, '0');
-              exdates.push(`${y}${m}${d}T${String(startHour).padStart(2, '0')}${String(startMin).padStart(2, '0')}00`);
+              const exDate = new Date(cur);
+              exDate.setHours(startHour, startMin, 0, 0);
+              exdates.push(formatICSDate(exDate));
             }
             cur.setDate(cur.getDate() + 1);
           }

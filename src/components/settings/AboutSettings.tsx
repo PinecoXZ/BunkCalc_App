@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SubHeader from './SubHeader';
 import ThemedIcon from '../ThemedIcon';
 import { APP_VERSION_NAME } from '../../lib/constants';
+import { useUpdateStore } from '../../store/useUpdateStore';
 
 interface AboutSettingsProps {
   onBack: () => void;
@@ -18,6 +19,22 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
   onFeedback,
   onOpenLegal,
 }) => {
+  const { checkForUpdates, isChecking, isUpdateAvailable, latestVersion } = useUpdateStore();
+  const [checkStatusMessage, setCheckStatusMessage] = useState<string | null>(null);
+
+  const handleManualCheck = async () => {
+    setCheckStatusMessage('Checking for updates...');
+    const hasUpdate = await checkForUpdates(true);
+    if (hasUpdate) {
+      setCheckStatusMessage(`New update available (v${useUpdateStore.getState().latestVersion})! Check the top banner.`);
+    } else {
+      setCheckStatusMessage(`You're using the latest version (v${APP_VERSION_NAME}).`);
+    }
+    setTimeout(() => {
+      setCheckStatusMessage(null);
+    }, 4000);
+  };
+
   return (
     <div className="animate-in fade-in duration-150 space-y-6">
       <SubHeader title="About & Support" onBack={onBack} />
@@ -25,7 +42,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
       <div className="neu-card rounded-3xl overflow-hidden divide-y divide-slate-200/50 dark:divide-slate-800/60">
         <button 
           onClick={onRate}
-          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors"
+          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-amber-500">
@@ -40,7 +57,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
         
         <button 
           onClick={onShare}
-          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors"
+          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-500">
@@ -53,7 +70,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
 
         <button 
           onClick={onFeedback}
-          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors"
+          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-emerald-500">
@@ -67,11 +84,39 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
           <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-500" />
         </button>
 
+        {/* Check for Updates */}
+        <button
+          onClick={handleManualCheck}
+          disabled={isChecking}
+          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors cursor-pointer disabled:opacity-60 text-left"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-sky-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isChecking ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Check for Updates</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                {checkStatusMessage 
+                  ? checkStatusMessage 
+                  : isUpdateAvailable 
+                    ? `Update v${latestVersion} ready to install`
+                    : 'Check GitHub & cloud for latest release'}
+              </p>
+            </div>
+          </div>
+          <span className="neu-inset px-2.5 py-1 rounded-xl text-sky-600 dark:text-sky-400 font-bold uppercase text-[10px]">
+            {isChecking ? 'Checking...' : isUpdateAvailable ? 'Update' : 'Check'}
+          </span>
+        </button>
+
         <a 
-          href="https://github.com/PinecoXZ"
+          href="https://github.com/PinecoXZ/BunkCalc_App"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors"
+          className="w-full p-4.5 flex justify-between items-center hover:bg-slate-500/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-purple-500">
@@ -80,8 +125,8 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
               </svg>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Developer (PinecoXZ)</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">Visit GitHub profile @PinecoXZ</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">GitHub Repository</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">PinecoXZ / BunkCalc_App</p>
             </div>
           </div>
           <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-500" />
@@ -89,14 +134,14 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
 
         <button 
           onClick={() => onOpenLegal({ title: 'Privacy Policy', type: 'privacy' })}
-          className="w-full p-4.5 text-left hover:bg-slate-500/5 transition-colors font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center text-sm"
+          className="w-full p-4.5 text-left hover:bg-slate-500/5 transition-colors font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center text-sm cursor-pointer"
         >
           <span>Privacy Policy</span>
           <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-500" />
         </button>
         <button 
           onClick={() => onOpenLegal({ title: 'Terms of Service', type: 'terms' })}
-          className="w-full p-4.5 text-left hover:bg-slate-500/5 transition-colors font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center text-sm"
+          className="w-full p-4.5 text-left hover:bg-slate-500/5 transition-colors font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center text-sm cursor-pointer"
         >
           <span>Terms of Service</span>
           <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-500" />
@@ -111,4 +156,3 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
 };
 
 export default AboutSettings;
-

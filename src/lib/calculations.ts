@@ -234,4 +234,89 @@ export const calculateWeekdayStats = (records: AttendanceRecord[]): WeekdayStat[
   });
 };
 
+/**
+ * Calculates current consecutive attendance streak (days where all scheduled classes were attended).
+ * Automatically skips weekends, holidays, and days with no classes.
+ */
+export const calculateAttendanceStreak = (
+  records: AttendanceRecord[],
+  subjects: Subject[],
+  holidays: Holiday[] = []
+): number => {
+  if (subjects.length === 0 || records.length === 0) return 0;
+
+  // Index records by date -> subjectId -> status for O(1) lookups
+  const recordsByDate = new Map<string, Map<string, AttendanceRecord['status']>>();
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    let dayMap = recordsByDate.get(r.date);
+    if (!dayMap) {
+      dayMap = new Map();
+      recordsByDate.set(r.date, dayMap);
+    }
+    dayMap.set(r.subjectId, r.status);
+  }
+
+  const now = new Date();
+  let streak = 0;
+
+  for (let daysBack = 0; daysBack < 365; daysBack++) {
+    const checkDate = new Date(now);
+    checkDate.setDate(checkDate.getDate() - daysBack);
+    const dayOfWeek = checkDate.getDay();
+    const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+
+    // Check if this date falls within a configured holiday
+    const isHoliday = holidays.some((h) => dateStr >= h.startDate && dateStr <= h.endDate);
+    if (isHoliday) continue;
+
+    // Find subjects scheduled for this day
+    const scheduledSubjects = subjects.filter((s) =>
+      s.schedule.some((slot) => Number(slot.day) === dayOfWeek)
+    );
+
+    // No classes scheduled -> skip this day without breaking streak
+    if (scheduledSubjects.length === 0) continue;
+
+    // Check attendance for each scheduled subject on this date
+    const dayMap = recordsByDate.get(dateStr);
+
+    if (!dayMap || dayMap.size === 0) {
+      if (daysBack === 0) continue; // Today hasn't been marked yet, skip
+      break; // Past day with no records = missed
+    }
+
+    let hasAbsent = false;
+    let hasPresent = false;
+    let unmarkedCount = 0;
+
+    for (const sub of scheduledSubjects) {
+      const status = dayMap.get(sub.id);
+      if (!status) {
+        unmarkedCount++;
+      } else if (status === 'absent') {
+        hasAbsent = true;
+        break;
+      } else if (status === 'present') {
+        hasPresent = true;
+      }
+    }
+
+    if (hasAbsent) break;
+
+    if (daysBack === 0) {
+      if (hasPresent && unmarkedCount === 0) {
+        streak++;
+      }
+      continue;
+    }
+
+    if (unmarkedCount > 0) break;
+    streak++;
+  }
+
+  return streak;
+};
+
+
 

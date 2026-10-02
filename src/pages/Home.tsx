@@ -8,10 +8,9 @@ import BunkMeter from '../components/BunkMeter';
 import ThemedIcon from '../components/ThemedIcon';
 import HelpTooltip from '../components/HelpTooltip';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { calculateSubjectStats } from '../lib/calculations';
+import { calculateSubjectStats, calculateOverallStats } from '../lib/calculations';
 import type { Subject } from '../lib/types';
 import SemesterProgress from '../components/SemesterProgress';
-import { UpdateBanner } from '../components/UpdateBanner';
 import { WeeklyStrategyModal } from '../components/WeeklyStrategyModal';
 import { registerBackHandler } from '../lib/backHandler';
 
@@ -71,42 +70,16 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Compute Overall Bunk Budget & Overall Attendance
+  // Compute Overall Bunk Budget & Overall Attendance using consolidated calculation engine
   const overallStats = React.useMemo(() => {
-    if (subjects.length === 0) {
-      return { totalAttended: 0, totalClasses: 0, percentage: 100, safeBunksTotal: 0, classesNeededTotal: 0 };
-    }
-
-    let totalAttended = 0;
-    let totalClasses = 0;
-    let safeBunksTotal = 0;
-    let classesNeededTotal = 0;
-
-    subjects.forEach((subj) => {
-      const stats = calculateSubjectStats(
-        subj,
-        records,
-        settings.semesterEndDate,
-        settings.holidays
-      );
-      totalAttended += stats.attendedCount;
-      totalClasses += stats.totalClasses;
-      safeBunksTotal += Math.max(0, stats.bunkBudget);
-      if (stats.bunkBudget < 0) {
-        classesNeededTotal += stats.classesNeededToRecover;
-      }
-    });
-
-    const percentage = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
-
-    return {
-      totalAttended,
-      totalClasses,
-      percentage,
-      safeBunksTotal,
-      classesNeededTotal,
-    };
-  }, [subjects, records, settings.semesterEndDate, settings.holidays]);
+    return calculateOverallStats(
+      subjects,
+      records,
+      settings.semesterEndDate,
+      settings.holidays,
+      settings.globalThreshold
+    );
+  }, [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]);
 
   const { liveClass, nextClass } = useMemo<{
     liveClass: { subject: Subject; time: string; endMins: number } | null;
@@ -243,9 +216,6 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
 
   return (
     <div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-100 p-4 pb-28">
-      <div className="-mx-4 -mt-4 mb-4">
-        <UpdateBanner />
-      </div>
       <header className="mb-5 flex justify-between items-center anim-fade-scale">
         <div>
           <h1 className="text-3xl font-black text-blue-500 italic uppercase tracking-tight">BunkCalc</h1>
@@ -352,7 +322,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             <div className="mb-5">
               <BunkMeter
                 percentage={overallStats.percentage}
-                safeBunksTotal={overallStats.safeBunksTotal}
+                safeBunksTotal={overallStats.totalSafeBunks}
                 classesNeededTotal={overallStats.classesNeededTotal}
                 totalClasses={overallStats.totalClasses}
                 totalAttended={overallStats.totalAttended}

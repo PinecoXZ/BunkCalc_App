@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Subject, AttendanceRecord, ShareCardTheme } from '../lib/types';
-import { calculateSubjectStats } from '../lib/calculations';
+import { calculateSubjectStats, calculateOverallStats } from '../lib/calculations';
 import { useSettings } from '../store/useSettings';
 import { OledThemeCard } from './share/OledThemeCard';
 import { AcademicThemeCard } from './share/AcademicThemeCard';
@@ -24,27 +24,22 @@ export const ShareCard: React.FC<Props> = ({ subjects, records, theme = 'neon' }
     }));
   }, [subjects, records, settings.semesterEndDate, settings.holidays]);
 
-  const { totalAttended, totalPossible, totalSafeBunks } = React.useMemo(() => {
-    let attended = 0;
-    let possible = 0;
-    let safeBunks = 0;
-    for (const item of subjectWithStats) {
-      attended += item.stats.attendedCount;
-      possible += item.stats.totalClasses;
-      safeBunks += Math.max(0, item.stats.bunkBudget);
-    }
-    return { totalAttended: attended, totalPossible: possible, totalSafeBunks: safeBunks };
-  }, [subjectWithStats]);
-
-  const overallPct = totalPossible === 0 ? 100 : (totalAttended / totalPossible) * 100;
-  const isSafe = overallPct >= (settings.globalThreshold * 100);
+  const overallStats = React.useMemo(() => {
+    return calculateOverallStats(
+      subjects,
+      records,
+      settings.semesterEndDate,
+      settings.holidays,
+      settings.globalThreshold
+    );
+  }, [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]);
 
   const themeProps = {
-    overallPct,
-    isSafe,
-    totalAttended,
-    totalPossible,
-    totalSafeBunks,
+    overallPct: overallStats.percentage,
+    isSafe: overallStats.isSafe,
+    totalAttended: overallStats.totalAttended,
+    totalPossible: overallStats.totalClasses,
+    totalSafeBunks: overallStats.totalSafeBunks,
     subjectWithStats,
   };
 

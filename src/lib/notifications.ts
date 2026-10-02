@@ -4,13 +4,13 @@ import { calculateSubjectStats } from './calculations';
 import { ensureNotificationPermission } from './permissions';
 import { toISODateStr } from './dateUtils';
 
-// Unique IDs for different notification types
-const NOTIF_ID_DAILY_BASE = 100000;
-const NOTIF_ID_POST_CLASS_BASE = 200000;
-const NOTIF_ID_THRESHOLD_BASE = 300000;
-const NOTIF_ID_STATUS_BASE = 400000;
-const NOTIF_ID_SUNDAY_SUMMARY = 500000;
-const NOTIF_ID_DAILY_DIGEST = 600000;
+// Unique IDs for different notification types (spaced by 1,000,000 to prevent 7-day offset collisions)
+const NOTIF_ID_DAILY_BASE = 1000000;
+const NOTIF_ID_POST_CLASS_BASE = 2000000;
+const NOTIF_ID_THRESHOLD_BASE = 3000000;
+const NOTIF_ID_STATUS_BASE = 4000000;
+const NOTIF_ID_SUNDAY_SUMMARY = 5000000;
+const NOTIF_ID_DAILY_DIGEST = 6000000;
 
 const getSubjectHash = (id: string) => {
   return Math.abs(id.split('').reduce((a, b) => { 
@@ -20,7 +20,7 @@ const getSubjectHash = (id: string) => {
 };
 
 // Generate deterministic collision-free 32-bit positive integer IDs
-const getReminderId = (base: number, dayOffset: number, subjectId: string, slotIndex: number) => {
+export const getReminderId = (base: number, dayOffset: number, subjectId: string, slotIndex: number) => {
   const subHash = getSubjectHash(subjectId);
   return base + (dayOffset * 100000) + (subHash * 10) + (slotIndex % 10);
 };
@@ -393,4 +393,43 @@ export const cancelSubjectNotifications = async (subjectId: string) => {
   });
   await cancelPostClassReminder(subjectId);
 };
+
+const NOTIF_ID_APP_UPDATE = 7000000;
+
+/**
+ * Delivers a local notification when an app update is available.
+ * Stores a version-specific flag in localStorage so user isn't spammed repeatedly for the same version.
+ */
+export const notifyAppUpdateAvailable = async (versionName: string) => {
+  try {
+    const hasPerm = await ensureNotificationPermission();
+    if (!hasPerm) return;
+
+    const notifiedKey = `bunkcalc_notified_update_${versionName}`;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(notifiedKey) === 'true') {
+      return;
+    }
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: NOTIF_ID_APP_UPDATE,
+          title: `Update Available: BunkCalc v${versionName} 🚀`,
+          body: `A new version is available! Tap the in-app banner or download button to update.`,
+          schedule: { at: new Date(Date.now() + 1000) },
+          smallIcon: 'ic_launcher',
+          iconColor: '#3B82F6',
+          extra: { type: 'app_update', version: versionName },
+        },
+      ],
+    });
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(notifiedKey, 'true');
+    }
+  } catch (err) {
+    console.warn('Failed to schedule update notification:', err);
+  }
+};
+
 

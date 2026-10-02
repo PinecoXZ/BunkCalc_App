@@ -1,4 +1,4 @@
-﻿import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
@@ -36,7 +36,7 @@ export const shareAttendanceCard = async (): Promise<{ success: boolean; method?
 
     const canvas = await html2canvas(cloned, {
       backgroundColor: '#020617', // slate-950
-      scale: 2,
+      scale: typeof window !== 'undefined' ? Math.max(2, Math.min(3, window.devicePixelRatio || 2)) : 2,
       useCORS: true,
       allowTaint: true,
       logging: false,

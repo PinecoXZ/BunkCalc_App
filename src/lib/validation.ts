@@ -176,7 +176,7 @@ function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } 
   if (!isBoolean(s.holidayMode)) return { valid: false };
   if (!isBoolean(s.hapticsEnabled)) return { valid: false };
   
-  const validThemes = ['light', 'dark', 'system'];
+  const validThemes = ['light', 'dark', 'dracula', 'cyberpunk', 'nord', 'forest', 'system'];
   const theme = s.theme === 'oled' ? 'dark' : (validThemes.includes(s.theme as string) ? s.theme : 'system');
 
   const validAccents = ['blue', 'purple', 'emerald', 'amber', 'rose'];
@@ -186,15 +186,22 @@ function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } 
     semesterEndDate: isString(s.semesterEndDate) ? s.semesterEndDate : '',
     globalThreshold: s.globalThreshold,
     warningBuffer: s.warningBuffer,
+    targetThreshold: isNumber(s.targetThreshold) && s.targetThreshold >= 0 && s.targetThreshold <= 1 ? s.targetThreshold : undefined,
+    appLockEnabled: isBoolean(s.appLockEnabled) ? s.appLockEnabled : false,
+    appLockPin: isString(s.appLockPin) && s.appLockPin.trim().length > 0 ? s.appLockPin.trim() : undefined,
+    biometricsEnabled: isBoolean(s.biometricsEnabled) ? s.biometricsEnabled : undefined,
     notificationsEnabled: s.notificationsEnabled,
     preClassReminder: s.preClassReminder !== false,
     postClassReminder: s.postClassReminder !== false,
     sundaySummaryNotification: s.sundaySummaryNotification !== false,
+    dailyScheduleDigest: isBoolean(s.dailyScheduleDigest) ? s.dailyScheduleDigest : false,
+    dailyDigestTime: isString(s.dailyDigestTime) ? s.dailyDigestTime : '07:30',
     reminderMinutesBefore: s.reminderMinutesBefore as 5 | 10 | 15 | 30,
     holidayMode: s.holidayMode,
     hapticsEnabled: s.hapticsEnabled,
     theme: theme as AppSettings['theme'],
     themeAccent,
+    toneMode: s.toneMode === 'meme' ? 'meme' : 'standard',
   };
 
   if (s.semesterEndDate !== undefined) {

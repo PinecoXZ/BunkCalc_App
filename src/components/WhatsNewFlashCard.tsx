@@ -40,19 +40,28 @@ export const WhatsNewFlashCard: React.FC<Props> = ({ isOpen, onClose }) => {
         <div className="p-5 overflow-y-auto flex-1 space-y-3.5 text-xs">
           <div className="neu-flat-sm p-3.5 rounded-2xl border border-blue-500/20">
             <p className="font-bold text-blue-600 dark:text-blue-400 text-sm mb-1">
-              Frosted Glass UI &amp; Status Stripes (v2.2.5)
+              Auto-Update Engine &amp; Notifications (v2.2.6)
             </p>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Refined Light Mode with clean frosted glassmorphism, instant visual left-border status stripes on cards, compact semester progress, and staggered entrance animations.
+              Multi-tiered update detection engine with direct GitHub release integration, immediate push notifications for new updates, manual update checking in Settings, and global update banners.
+            </p>
+          </div>
+
+          <div className="neu-flat-sm p-3.5 rounded-2xl border border-emerald-500/20">
+            <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1">
+              Batch Attendance &amp; Performance
+            </p>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Atomic batch state mutations for 1-tap &ldquo;Mark All Present&rdquo; and &ldquo;Clear Today&rdquo;, reducing disk I/O, widget sync, and notification rescheduling loops to O(1).
             </p>
           </div>
 
           <div className="neu-flat-sm p-3.5 rounded-2xl border border-purple-500/20">
             <p className="font-bold text-purple-600 dark:text-purple-400 text-sm mb-1">
-              Lab Multiplier &amp; Precision Hardening
+              Frosted Glass UI &amp; Status Stripes
             </p>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              2-hour practical labs compute exact safe lab bunks, recovery requirements, and ERP session credits with zero-drift floating point precision.
+              Refined Light Mode with clean frosted glassmorphism, instant visual left-border status stripes on cards, compact semester progress, and staggered entrance animations.
             </p>
           </div>
 

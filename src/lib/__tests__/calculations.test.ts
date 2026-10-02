@@ -4,7 +4,8 @@ import {
   calculateWeekdayStats,
   calculateOverallStats,
   calculateBunkBudget,
-  calculateClassesNeededToRecover
+  calculateClassesNeededToRecover,
+  calculateAttendanceStreak
 } from '../calculations';
 import type { Subject, AttendanceRecord } from '../types';
 
@@ -279,6 +280,78 @@ describe('BunkCalc Calculation Engine (TRD §3)', () => {
       expect(calculateClassesNeededToRecover(3, 1, 0.8, 1)).toBe(1);
       // Lab multiplier 2: 4 attended, 2 missed, 80% threshold -> 2 labs needed
       expect(calculateClassesNeededToRecover(4, 2, 0.8, 2)).toBe(2);
+    });
+  });
+
+  describe('Attendance Streak Calculation (calculateAttendanceStreak)', () => {
+    const formatDate = (daysAgo: number): { dateStr: string; dayOfWeek: number } => {
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      const dayOfWeek = d.getDay();
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return { dateStr, dayOfWeek };
+    };
+
+    it('returns 0 for empty subjects or empty records', () => {
+      expect(calculateAttendanceStreak([], [])).toBe(0);
+      expect(calculateAttendanceStreak([], [createSubject()])).toBe(0);
+    });
+
+    it('calculates streak for consecutive attended days', () => {
+      const subject = createSubject({
+        schedule: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, slot: '10:00' })),
+      });
+
+      const day0 = formatDate(0);
+      const day1 = formatDate(1);
+      const day2 = formatDate(2);
+
+      const records: AttendanceRecord[] = [
+        { id: '1', subjectId: subject.id, date: day0.dateStr, status: 'present' },
+        { id: '2', subjectId: subject.id, date: day1.dateStr, status: 'present' },
+        { id: '3', subjectId: subject.id, date: day2.dateStr, status: 'present' },
+      ];
+
+      expect(calculateAttendanceStreak(records, [subject])).toBe(3);
+    });
+
+    it('breaks streak when an absent status is encountered', () => {
+      const subject = createSubject({
+        schedule: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, slot: '10:00' })),
+      });
+
+      const day0 = formatDate(0);
+      const day1 = formatDate(1);
+      const day2 = formatDate(2);
+
+      const records: AttendanceRecord[] = [
+        { id: '1', subjectId: subject.id, date: day0.dateStr, status: 'present' },
+        { id: '2', subjectId: subject.id, date: day1.dateStr, status: 'absent' },
+        { id: '3', subjectId: subject.id, date: day2.dateStr, status: 'present' },
+      ];
+
+      expect(calculateAttendanceStreak(records, [subject])).toBe(1);
+    });
+
+    it('skips registered holidays without breaking streak', () => {
+      const subject = createSubject({
+        schedule: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, slot: '10:00' })),
+      });
+
+      const day0 = formatDate(0);
+      const day1 = formatDate(1);
+      const day2 = formatDate(2);
+
+      const holidays = [
+        { id: 'h1', name: 'Festive Holiday', startDate: day1.dateStr, endDate: day1.dateStr },
+      ];
+
+      const records: AttendanceRecord[] = [
+        { id: '1', subjectId: subject.id, date: day0.dateStr, status: 'present' },
+        { id: '3', subjectId: subject.id, date: day2.dateStr, status: 'present' },
+      ];
+
+      expect(calculateAttendanceStreak(records, [subject], holidays)).toBe(2);
     });
   });
 });

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AttendanceRecord } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
 import { handleAttendanceAlerts } from '../lib/notifications';
-import { toISODateStr } from '../lib/dateUtils';
+import { calculateAttendanceStreak } from '../lib/calculations';
 import { syncNotificationsAndWidgets } from './syncHelpers';
 import { useSubjects } from './useSubjects';
 import { useSettings } from './useSettings';
@@ -16,7 +16,9 @@ interface AttendanceState {
   records: AttendanceRecord[];
   lastAction: LastAction | null;
   markAttendance: (record: AttendanceRecord) => Promise<void>;
+  markMultipleAttendance: (records: AttendanceRecord[]) => Promise<void>;
   unmarkAttendance: (id: string) => Promise<void>;
+  unmarkMultipleAttendance: (recordIds: string[]) => Promise<void>;
   undoLastAction: () => Promise<void>;
   clearLastAction: () => void;
   loadRecords: () => Promise<void>;
@@ -66,6 +68,40 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     // Re-sync scheduled class reminders and widgets to ensure marked classes are updated
     await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
   },
+  markMultipleAttendance: async (newEntries) => {
+    if (newEntries.length === 0) return;
+    let oldRecords: AttendanceRecord[] = [];
+    let updatedRecords: AttendanceRecord[] = [];
+
+    set((state) => {
+      oldRecords = state.records;
+      const keySet = new Set(newEntries.map(e => `${e.subjectId}_${e.date}`));
+      const remaining = oldRecords.filter(r => !keySet.has(`${r.subjectId}_${r.date}`));
+      updatedRecords = [...remaining, ...newEntries];
+      return {
+        records: updatedRecords,
+        lastAction: null,
+      };
+    });
+
+    try {
+      await saveToStorage('attendance_records', updatedRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
+
+    const allSubjects = useSubjects.getState().subjects;
+    const settings = useSettings.getState().settings;
+
+    for (const entry of newEntries) {
+      const subject = allSubjects.find(s => s.id === entry.subjectId);
+      if (subject) {
+        await handleAttendanceAlerts(subject, oldRecords, updatedRecords, settings);
+      }
+    }
+
+    await syncNotificationsAndWidgets(allSubjects, settings, updatedRecords);
+  },
   unmarkAttendance: async (id) => {
     let oldRecords: AttendanceRecord[] = [];
     let newRecords: AttendanceRecord[] = [];
@@ -102,6 +138,29 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       }
     }
     await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
+  },
+  unmarkMultipleAttendance: async (recordIds) => {
+    if (recordIds.length === 0) return;
+    let updatedRecords: AttendanceRecord[] = [];
+    const idSet = new Set(recordIds);
+
+    set((state) => {
+      updatedRecords = state.records.filter(r => !idSet.has(r.id));
+      return {
+        records: updatedRecords,
+        lastAction: null,
+      };
+    });
+
+    try {
+      await saveToStorage('attendance_records', updatedRecords);
+    } catch (err) {
+      console.error('Failed to persist attendance_records:', err);
+    }
+
+    const allSubjects = useSubjects.getState().subjects;
+    const settings = useSettings.getState().settings;
+    await syncNotificationsAndWidgets(allSubjects, settings, updatedRecords);
   },
   undoLastAction: async () => {
     const { lastAction } = get();
@@ -159,83 +218,11 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     if (stored) set({ records: stored });
   },
   getStreak: () => {
-    const { records } = get();
-    const subjects = useSubjects.getState().subjects;
-    const settings = useSettings.getState().settings;
-    if (subjects.length === 0 || records.length === 0) return 0;
-
-    // Index records by date -> subjectId -> status for O(1) lookups
-    const recordsByDate = new Map<string, Map<string, AttendanceRecord['status']>>();
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      let dayMap = recordsByDate.get(r.date);
-      if (!dayMap) {
-        dayMap = new Map();
-        recordsByDate.set(r.date, dayMap);
-      }
-      dayMap.set(r.subjectId, r.status);
-    }
-
-    // Walk backwards from today counting consecutive days where ALL scheduled classes were 'present' (skip 'cancelled' and 'holidays')
-    const now = new Date();
-    let streak = 0;
-
-    for (let daysBack = 0; daysBack < 365; daysBack++) {
-      const checkDate = new Date(now);
-      checkDate.setDate(checkDate.getDate() - daysBack);
-      const dayOfWeek = checkDate.getDay();
-      const dateStr = toISODateStr(checkDate);
-
-      // Check if this date falls within a configured holiday
-      const isHoliday = settings.holidays?.some(h => dateStr >= h.startDate && dateStr <= h.endDate);
-      if (isHoliday) continue; // Skip holidays without breaking streak
-
-      // Find subjects scheduled for this day
-      const scheduledSubjects = subjects.filter(s =>
-        s.schedule.some(slot => Number(slot.day) === dayOfWeek)
-      );
-
-      // No classes scheduled → skip this day (don't break streak)
-      if (scheduledSubjects.length === 0) continue;
-
-      // Check attendance for each scheduled subject on this date
-      const dayMap = recordsByDate.get(dateStr);
-      
-      // If no records at all for today (today might not have started yet)
-      if (!dayMap || dayMap.size === 0) {
-        if (daysBack === 0) continue; // Today hasn't been marked yet, skip
-        break; // Past day with no records = missed
-      }
-
-      let hasAbsent = false;
-      let hasPresent = false;
-      let unmarkedCount = 0;
-
-      for (const sub of scheduledSubjects) {
-        const status = dayMap.get(sub.id);
-        if (!status) {
-          unmarkedCount++;
-        } else if (status === 'absent') {
-          hasAbsent = true;
-          break;
-        } else if (status === 'present') {
-          hasPresent = true;
-        }
-      }
-
-      if (hasAbsent) break;
-
-      if (daysBack === 0) {
-        if (hasPresent && unmarkedCount === 0) {
-          streak++;
-        }
-        continue;
-      }
-
-      if (unmarkedCount > 0) break;
-      streak++;
-    }
-
-    return streak;
+    return calculateAttendanceStreak(
+      get().records,
+      useSubjects.getState().subjects,
+      useSettings.getState().settings.holidays
+    );
   },
 }));
+

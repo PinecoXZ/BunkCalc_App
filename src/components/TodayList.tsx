@@ -16,7 +16,7 @@ import { toISODateStr } from '../lib/dateUtils';
 
 const TodayList: React.FC = () => {
   const subjects = useSubjects((state) => state.subjects);
-  const { records, markAttendance, unmarkAttendance, undoLastAction, clearLastAction } = useAttendance();
+  const { records, markAttendance, markMultipleAttendance, unmarkAttendance, unmarkMultipleAttendance, undoLastAction, clearLastAction } = useAttendance();
   const settings = useSettings((state) => state.settings);
 
   // Toast & Celebration state
@@ -75,8 +75,8 @@ const TodayList: React.FC = () => {
   const todayRecords = records.filter((r) => r.date === dateStr);
 
   const handleClearTodayRecords = async () => {
-    for (const r of todayRecords) {
-      await unmarkAttendance(r.id);
+    if (todayRecords.length > 0) {
+      await unmarkMultipleAttendance(todayRecords.map(r => r.id));
     }
     setToast({ subjectName: "Today's holiday records", status: 'cancelled' });
   };
@@ -174,7 +174,7 @@ const TodayList: React.FC = () => {
     handleMarkRef.current = handleMark;
   }, [handleMark]);
 
-  // Batch Mark All Present
+  // Batch Mark All Present (1 single transaction & sync)
   const handleMarkAllPresent = async () => {
     if (settings.hapticsEnabled) {
       try {
@@ -185,14 +185,16 @@ const TodayList: React.FC = () => {
     }
 
     const unmarked = todayClasses.filter(s => !getStatusForToday(s.id));
-    for (const s of unmarked) {
-      await markAttendance({
-        id: uuidv4(),
-        subjectId: s.id,
-        date: dateStr,
-        status: 'present',
-      });
-    }
+    if (unmarked.length === 0) return;
+
+    const newEntries = unmarked.map(s => ({
+      id: uuidv4(),
+      subjectId: s.id,
+      date: dateStr,
+      status: 'present' as AttendanceStatus,
+    }));
+
+    await markMultipleAttendance(newEntries);
 
     setCelebration('present');
     setToast({ subjectName: `All ${unmarked.length} Classes`, status: 'present' });

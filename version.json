@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "2.2.6",
+  "versionCode": 14,
+  "versionName": "2.2.7",
   "apkUrl": "https://bunk-calc-web.vercel.app/bunkcalc.apk",
-  "changelog": "v2.2.6: Multi-tiered auto-update discovery engine with GitHub release integration, batch attendance state mutations for instant marking, and code quality optimizations."
+  "changelog": "v2.2.7: End-of-semester summary & new semester wizard, archived semester subject breakdowns in setup, multi-slot scheduling, PBKDF2 PIN hardening, and PDF report exports."
 }

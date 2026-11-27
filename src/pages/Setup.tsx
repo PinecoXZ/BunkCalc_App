@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSubjects } from '../store/useSubjects';
 import { useSettings } from '../store/useSettings';
 import { v4 as uuidv4 } from 'uuid';
 import type { Subject } from '../lib/types';
-import { sanitizeName } from '../lib/validation';
+import { sanitizeName, validateSubjectName } from '../lib/validation';
 import { AppModal } from '../components/AppModal';
+import ArchivedSemestersSection from '../components/ArchivedSemestersSection';
+import { registerBackHandler } from '../lib/backHandler';
 
 const Setup: React.FC = () => {
-  const { addSubject } = useSubjects();
-  const { settings, setSettings } = useSettings();
+  const { addMultipleSubjects } = useSubjects();
+  const { settings, setSettings, archivedSemesters, deleteArchivedSemester } = useSettings();
   
   const [step, setStep] = useState(1);
   const [tempSubjects, setTempSubjects] = useState<Subject[]>([]);
@@ -41,38 +43,54 @@ const Setup: React.FC = () => {
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  useEffect(() => {
+    if (!modal && step === 1) return;
+    return registerBackHandler(() => {
+      if (modal) {
+        setModal(null);
+        return true;
+      }
+      if (step === 2) {
+        setStep(1);
+        return true;
+      }
+      return false;
+    });
+  }, [modal, step]);
+
   const handleAddSubject = () => {
     const days = Object.keys(scheduleMap).map(Number);
     const sanitizedName = sanitizeName(name);
-    if (!sanitizedName || days.length === 0) return;
-    
-    // Check for duplicate subject names
-    const nameExists = tempSubjects.some(s => s.name.toLowerCase().trim() === sanitizedName.toLowerCase().trim());
-    if (nameExists) {
+    const validation = validateSubjectName(sanitizedName, tempSubjects.map(s => s.name));
+    if (!validation.valid) {
       setModal({
         isOpen: true,
-        title: "Duplicate Subject",
-        message: `A subject named "${sanitizedName}" has already been added.`,
+        title: "Validation Error",
+        message: validation.error || "Invalid subject name.",
         type: "error",
         confirmText: "OK",
-        onConfirm: () => setModal(null)
+        onConfirm: () => setModal(null),
       });
       return;
     }
+    if (days.length === 0) return;
     
+    const sanitizedRoom = sanitizeName(room) || undefined;
+    const sanitizedFaculty = sanitizeName(faculty) || undefined;
+
     const newSub: Subject = {
       id: uuidv4(),
       name: sanitizedName,
       credits,
       threshold: subjectThreshold,
       isLab,
-      room: room.trim() || undefined,
-      faculty: faculty.trim() || undefined,
+      room: sanitizedRoom,
+      faculty: sanitizedFaculty,
       schedule: days.map(day => ({ 
         day, 
         slot: useCustomTime ? scheduleMap[day] : globalSlot,
-        room: room.trim() || undefined,
-        faculty: faculty.trim() || undefined,
+        room: sanitizedRoom,
+        faculty: sanitizedFaculty,
       })),
       attendedSoFar: Math.max(0, attendedSoFar),
       missedSoFar: Math.max(0, missedSoFar),
@@ -83,6 +101,7 @@ const Setup: React.FC = () => {
     // Reset form
     setName('');
     setCredits(3);
+    setSubjectThreshold(settings.globalThreshold);
     setIsLab(false);
     setRoom('');
     setFaculty('');
@@ -107,8 +126,8 @@ const Setup: React.FC = () => {
     setScheduleMap({ ...scheduleMap, [idx]: time });
   };
 
-  const handleFinish = () => {
-    tempSubjects.forEach(s => addSubject(s));
+  const handleFinish = async () => {
+    await addMultipleSubjects(tempSubjects);
   };
 
   return (
@@ -127,10 +146,15 @@ const Setup: React.FC = () => {
 
           <div className="space-y-6 neu-card p-6 rounded-3xl">
             <div>
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Attendance Threshold (%)</label>
+              <label htmlFor="setup-global-threshold" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Attendance Threshold (%)</label>
               <select 
+                id="setup-global-threshold"
                 value={Math.round(settings.globalThreshold * 100)}
-                onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
+                onChange={(e) => {
+                  const nextThreshold = Number(e.target.value) / 100;
+                  setSettings({ ...settings, globalThreshold: nextThreshold });
+                  setSubjectThreshold(nextThreshold);
+                }}
                 className="w-full neu-input rounded-2xl p-4 outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
               >
                 {[60, 65, 70, 75, 80, 85, 90].map(val => (
@@ -139,8 +163,9 @@ const Setup: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Semester End Date</label>
+              <label htmlFor="setup-semester-end" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2.5">Semester End Date</label>
               <input 
+                id="setup-semester-end"
                 type="date" 
                 value={(settings.semesterEndDate || '').split('T')[0]}
                 onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
@@ -151,11 +176,12 @@ const Setup: React.FC = () => {
 
           <button 
             onClick={() => {
-              const [y, m, d] = settings.semesterEndDate.split('-').map(Number);
+              const rawDate = (settings.semesterEndDate || '').split('T')[0];
+              const [y, m, d] = rawDate.split('-').map(Number);
               const endDate = new Date(y, m - 1, d);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              if (endDate <= today) {
+              if (!rawDate || !Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || isNaN(endDate.getTime()) || endDate <= today) {
                 setModal({
                   isOpen: true,
                   title: "Invalid Semester End Date",
@@ -172,6 +198,30 @@ const Setup: React.FC = () => {
           >
             Next Step
           </button>
+
+          {archivedSemesters.length > 0 && (
+            <div className="mt-8">
+              <ArchivedSemestersSection
+                archivedSemesters={archivedSemesters}
+                defaultThreshold={settings.globalThreshold}
+                onDeleteSemester={(sem) => {
+                  setModal({
+                    isOpen: true,
+                    title: 'Delete Archived Semester',
+                    message: `Delete "${sem.name}"? This archived snapshot cannot be recovered.`,
+                    type: 'confirm',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel',
+                    onConfirm: async () => {
+                      await deleteArchivedSemester(sem.id);
+                      setModal(null);
+                    },
+                    onCancel: () => setModal(null),
+                  });
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -193,8 +243,9 @@ const Setup: React.FC = () => {
           <div className="neu-card rounded-3xl p-6 mb-8">
             <div className="space-y-5">
               <div>
-                <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Subject Name</label>
+                <label htmlFor="setup-subject-name" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Subject Name</label>
                 <input 
+                  id="setup-subject-name"
                   placeholder="e.g. Data Structures" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -205,8 +256,9 @@ const Setup: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Room / Hall (Optional)</label>
+                  <label htmlFor="setup-room" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Room / Hall (Optional)</label>
                   <input 
+                    id="setup-room"
                     placeholder="e.g. Room 304" 
                     value={room}
                     onChange={(e) => setRoom(e.target.value)}
@@ -215,8 +267,9 @@ const Setup: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Faculty (Optional)</label>
+                  <label htmlFor="setup-faculty" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Faculty (Optional)</label>
                   <input 
+                    id="setup-faculty"
                     placeholder="e.g. Prof. Sharma" 
                     value={faculty}
                     onChange={(e) => setFaculty(e.target.value)}
@@ -228,8 +281,9 @@ const Setup: React.FC = () => {
 
               <div className="flex gap-3.5">
                 <div className="flex-1">
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Credits</label>
+                  <label htmlFor="setup-credits" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Credits</label>
                   <select 
+                    id="setup-credits"
                     value={credits}
                     onChange={(e) => setCredits(Number(e.target.value))}
                     className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
@@ -238,8 +292,9 @@ const Setup: React.FC = () => {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Type</label>
+                  <label htmlFor="setup-type" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Type</label>
                   <select 
+                    id="setup-type"
                     value={isLab ? 'lab' : 'theory'}
                     onChange={(e) => setIsLab(e.target.value === 'lab')}
                     className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
@@ -249,8 +304,9 @@ const Setup: React.FC = () => {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Target %</label>
+                  <label htmlFor="setup-target" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Target %</label>
                   <select 
+                    id="setup-target"
                     value={Math.round(subjectThreshold * 100)}
                     onChange={(e) => setSubjectThreshold(Number(e.target.value) / 100)}
                     className="w-full neu-input border-0 p-3 rounded-xl text-sm outline-none text-slate-900 dark:text-white font-bold cursor-pointer"
@@ -264,8 +320,9 @@ const Setup: React.FC = () => {
 
               {!useCustomTime && (
                 <div>
-                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Class Time</label>
+                  <label htmlFor="setup-class-time" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Class Time</label>
                   <input 
+                    id="setup-class-time"
                     type="time"
                     value={globalSlot}
                     onChange={(e) => setGlobalTime(e.target.value)}
@@ -291,7 +348,7 @@ const Setup: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2.5">Class Schedule</label>
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2.5">Class Schedule</p>
                 <div className="grid grid-cols-4 gap-2">
                   {daysOfWeek.map((day, idx) => {
                     const isActive = scheduleMap[idx] !== undefined;
@@ -337,8 +394,9 @@ const Setup: React.FC = () => {
                 </p>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Attended So Far</label>
+                    <label htmlFor="setup-attended" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Attended So Far</label>
                     <input 
+                      id="setup-attended"
                       type="number" 
                       min={0}
                       value={attendedSoFar}
@@ -347,8 +405,9 @@ const Setup: React.FC = () => {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Missed So Far</label>
+                    <label htmlFor="setup-missed" className="block text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Missed So Far</label>
                     <input 
+                      id="setup-missed"
                       type="number" 
                       min={0}
                       value={missedSoFar}

@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
 import { calculateSubjectStats } from '../lib/calculations';
+import { useCurrentDate } from '../lib/useCurrentDate';
+import { registerBackHandler } from '../lib/backHandler';
 import type { Subject, ScheduleSlot } from '../lib/types';
 
 const BLOCK_COLORS = [
@@ -38,13 +40,30 @@ export const TimetableGrid: React.FC = () => {
   const subjects = useSubjects((s) => s.subjects);
   const { records } = useAttendance();
   const { settings } = useSettings();
-  const today = new Date().getDay();
+  const { now } = useCurrentDate();
+  const today = now.getDay();
 
   const [inspectedClass, setInspectedClass] = useState<{
     subject: Subject;
     slot: ScheduleSlot;
     dayLabel: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!inspectedClass) return;
+    const unregister = registerBackHandler(() => {
+      setInspectedClass(null);
+      return true;
+    });
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setInspectedClass(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      unregister();
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [inspectedClass]);
 
   // Build a color map keyed by subject index for consistent coloring
   const colorMap = useMemo(() => {
@@ -262,7 +281,8 @@ export const TimetableGrid: React.FC = () => {
                 inspectedClass.subject,
                 records,
                 settings.semesterEndDate,
-                settings.holidays
+                settings.holidays,
+                settings.globalThreshold
               );
               const target = (inspectedClass.subject.threshold || settings.globalThreshold) * 100;
               const isSafe = stats.attendancePct >= target;

@@ -4,7 +4,7 @@
 
 ### _Take Control of Your College Life._
 
-[![Version](https://img.shields.io/badge/version-2.2.6-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
+[![Version](https://img.shields.io/badge/version-2.2.7-blue?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![Platform](https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/PinecoXZ/BunkCalc_App)
 [![License](https://img.shields.io/badge/license-Private-red?style=for-the-badge)](https://github.com/PinecoXZ/BunkCalc_App)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
@@ -46,7 +46,8 @@ Native Shell   Capacitor 8 (Android)
 Biometrics     @aparajita/capacitor-biometric-auth
 Haptics        @capacitor/haptics
 Notifications  @capacitor/local-notifications
-Storage        @capacitor/preferences (encrypted key-value)
+Icons          Reicon React
+Storage        @capacitor/preferences (sandboxed key-value)
 File I/O       @capacitor/filesystem
 Share          @capacitor/share
 ```
@@ -59,7 +60,7 @@ Share          @capacitor/share
 BunkCalc1/
 ├── android/                  # Native Android project (Capacitor-managed)
 │   └── app/
-│       ├── build.gradle      # Android build config (versionCode 13, v2.2.6)
+│       ├── build.gradle      # Android build config (versionCode 14, v2.2.7)
 │       └── src/main/
 │           ├── assets/       # Synced web bundle + public assets
 │           └── res/          # Launcher icons (mdpi → xxxhdpi) + splash
@@ -108,7 +109,7 @@ BunkCalc1/
 ### Prerequisites
 
 - **Node.js** ≥ 20
-- **npm** ≥ 10
+- **pnpm** ≥ 10
 - **Android Studio** (for building the APK)
 - **Java JDK 17** (for Gradle)
 
@@ -120,23 +121,23 @@ git clone <repo-url>
 cd BunkCalc1
 
 # 2. Install dependencies
-npm install
+pnpm install
 
 # 3. Start the development server
-npm run dev
+pnpm dev
 ```
 
 ### Building for Android
 
 ```bash
 # 1. Build the production web bundle
-npm run build
+pnpm build
 
 # 2. Sync with the Android project
-npx cap sync android
+pnpm exec cap sync android
 
 # 3. Open in Android Studio
-npx cap open android
+pnpm exec cap open android
 
 # 4. Build → Generate Signed APK from Android Studio
 ```
@@ -145,25 +146,25 @@ npx cap open android
 
 ## 🔒 Security
 
-BunkCalc takes security seriously, even as a fully offline application:
+BunkCalc takes security seriously as a local-first application:
 
 | Layer | Implementation |
 |---|---|
-| **Content Security Policy** | Strict CSP meta tag blocks all external scripts, styles, and connections |
+| **Content Security Policy** | Strict CSP meta tag restricts scripts/styles and limits `connect-src` strictly to GitHub/Vercel release metadata |
 | **Input Sanitisation** | All user inputs are stripped of HTML, script tags, control characters, and zero-width unicode |
 | **Import Validation** | JSON import payloads are schema-validated with prototype pollution detection & date validation |
 | **Type Safety** | Full TypeScript with strict mode across the entire codebase (0 ESLint errors) |
 | **No Secrets in Code** | Zero API keys, tokens, or credentials — the app has no backend |
-| **Secure Storage** | Data persisted via Capacitor Preferences (Android SharedPreferences, encrypted) |
+| **Local Storage & PIN Hashing** | Data persisted via Capacitor Preferences (sandboxed on-device SharedPreferences) with salted SHA-256 PIN hashing and `allowBackup="false"` |
 
 ---
 
 ## 🎨 Design Philosophy
 
-- **Local-first**: Your data never leaves your device
+- **Local-first**: Your attendance data never leaves your device
 - **Proactive, not reactive**: The app tells you what to do _before_ it's too late
 - **Respectful**: No ads, no tracking, no analytics, no subscriptions
-- **Beautiful**: Tactile Neumorphic (Soft UI 2.0) dark/light UI with 100% vector icons and haptic feedback
+- **Beautiful**: Tactile Neumorphic (Soft UI 2.0) dark/light UI with Reicon vector icons and haptic feedback
 - **Accessible**: Designed for one-handed use with a clear information hierarchy
 
 ---
@@ -172,10 +173,11 @@ BunkCalc takes security seriously, even as a fully offline application:
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server with HMR |
-| `npm run build` | TypeScript check + production build |
-| `npm run lint` | Run ESLint across the codebase |
-| `npx cap sync android` | Sync web assets → Android native project |
+| `pnpm dev` | Start Vite dev server with HMR |
+| `pnpm test` | Run Vitest unit tests |
+| `pnpm lint` | Run ESLint across the codebase |
+| `pnpm build` | TypeScript check + production build |
+| `pnpm exec cap sync android` | Sync web assets → Android native project |
 
 ---
 
@@ -189,6 +191,6 @@ This project is **private** and not open-source. All rights reserved.
 
 **Built with ❤️ for students who know when to show up — and when not to.**
 
-`v2.2.6` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
+`v2.2.7` · Developed by [PinecoXZ](https://github.com/PinecoXZ)
 
 </div>

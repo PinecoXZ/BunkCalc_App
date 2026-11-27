@@ -9,9 +9,14 @@ interface Props {
 
 const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-[var(--neu-bg)] text-slate-900 dark:text-white z-[60] flex flex-col animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="legal-modal-title"
+      className="fixed inset-0 bg-[var(--neu-bg)] text-slate-900 dark:text-white z-[60] flex flex-col animate-in fade-in duration-200"
+    >
       <header className="p-5 border-b border-slate-200/50 dark:border-slate-800/60 flex justify-between items-center bg-[var(--neu-surface)]">
-        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h2>
+        <h2 id="legal-modal-title" className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h2>
         <button 
           onClick={onClose} 
           aria-label="Close modal"
@@ -43,10 +48,10 @@ const LegalModal: React.FC<Props> = ({ title, type, onClose }) => {
             <section>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2">2. Our Privacy Commitment: Zero Data Collection</h3>
               <p>
-                BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-telemetry architecture</span>. All your data — including subjects, attendance history, past session counts, holiday managers, and notification preferences — is stored exclusively on your device using encrypted native storage (SharedPreferences / Preferences). We operate zero backend tracking servers, databases, or analytics engines.
+                BunkCalc is designed with a <span className="text-slate-900 dark:text-white font-bold">local-first, zero-telemetry architecture</span>. All your data — including subjects, attendance history, past session counts, holiday managers, and notification preferences — is stored exclusively in your device&apos;s sandboxed local storage (Android SharedPreferences via Capacitor Preferences). Security PINs are hashed on-device with salted SHA-256 before saving. We operate zero backend tracking servers, databases, or analytics engines.
               </p>
               <p className="mt-2 text-slate-900 dark:text-white font-bold italic">
-                In simple terms: your data never leaves your phone.
+                In simple terms: your attendance data never leaves your phone. Optional app-update checks fetch public release metadata from GitHub/Vercel without transmitting personal data and can be disabled in Settings &rarr; About &amp; Legal.
               </p>
             </section>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, Suspense, lazy } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense, lazy } from 'react';
 import { useSettings } from './store/useSettings';
 import { useSubjects } from './store/useSubjects';
 import { useAttendance } from './store/useAttendance';
@@ -12,11 +12,12 @@ import SkeletonLoader from './components/SkeletonLoader';
 import ErrorBoundary from './components/ErrorBoundary';
 import type { TabType } from './components/BottomNav';
 import type { Subject, AttendanceStatus } from './lib/types';
-import { scheduleDailyClassReminders, initNotificationActionTypes } from './lib/notifications';
+import { scheduleDailyClassReminders, initNotificationActionTypes, cancelAllNotifications } from './lib/notifications';
 import { toISODateStr } from './lib/dateUtils';
 import { useUpdateStore } from './store/useUpdateStore';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { v4 as uuidv4 } from 'uuid';
+import { AppModal } from './components/AppModal';
 
 // Views with background preloading
 const Settings = lazy(() => import('./pages/Settings'));
@@ -30,18 +31,26 @@ import { AppLockModal } from './components/AppLockModal';
 import { UpdateBanner } from './components/UpdateBanner';
 import { executeBackHandler } from './lib/backHandler';
 import { APP_VERSION_NAME } from './lib/constants';
+import { clearAppLockSuppression, shouldSuppressAppLock } from './lib/appLockBridge';
 
 function App() {
-  const { settings, loadSettings, loadArchivedSemesters } = useSettings();
-  const { loadSubjects, subjects } = useSubjects();
-  const { loadRecords } = useAttendance();
+  const { settings, loadSettings, loadArchivedSemesters, storageError: settingsError, clearStorageError: clearSettingsError } = useSettings();
+  const { loadSubjects, subjects, storageError: subjectsError, clearStorageError: clearSubjectsError } = useSubjects();
+  const { loadRecords, storageError: attendanceError, clearStorageError: clearAttendanceError } = useAttendance();
+
+  const activeStorageError = attendanceError || subjectsError || settingsError;
+  const clearAllStorageErrors = useCallback(() => {
+    clearAttendanceError();
+    clearSubjectsError();
+    clearSettingsError();
+  }, [clearAttendanceError, clearSubjectsError, clearSettingsError]);
 
   // Splash & load state
   const [showSplash, setShowSplash] = useState(true);
   const [dataReady, setDataReady] = useState(false);
   const [homeVisible, setHomeVisible] = useState(false);     // controls fade-in opacity
   const [showWhatsNewFlashCard, setShowWhatsNewFlashCard] = useState(false);
-  const [isAppLocked, setIsAppLocked] = useState(true);
+  const [isAppLocked, setIsAppLocked] = useState(false);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -60,34 +69,59 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // ── Back button handler ──
+  const navStateRef = useRef({
+    showSplash,
+    selectedSubject,
+    showHistory,
+    showCalendar,
+    activeTab,
+  });
+
   useEffect(() => {
+    navStateRef.current = {
+      showSplash,
+      selectedSubject,
+      showHistory,
+      showCalendar,
+      activeTab,
+    };
+  }, [showSplash, selectedSubject, showHistory, showCalendar, activeTab]);
+
+  // ── Back button handler (registered once; reads current nav state via ref) ──
+  useEffect(() => {
+    let cancelled = false;
     let backButtonListener: { remove: () => Promise<void> } | null = null;
 
     const setupBackButton = async () => {
       try {
         const { App: CapApp } = await import('@capacitor/app');
-        backButtonListener = await CapApp.addListener('backButton', () => {
-          if (showSplash) return;          // ignore during splash
+        const handle = await CapApp.addListener('backButton', () => {
+          const state = navStateRef.current;
+          if (state.showSplash) return; // ignore during splash
 
           // First check if any registered sub-view/modal handler consumed the back press
-          const consumed = executeBackHandler();
-          if (consumed) {
+          if (executeBackHandler()) {
             return;
           }
 
-          if (selectedSubject) {
+          if (state.selectedSubject) {
             setSelectedSubject(null);
-          } else if (showHistory) {
+          } else if (state.showHistory) {
             setShowHistory(false);
-          } else if (showCalendar) {
+          } else if (state.showCalendar) {
             setShowCalendar(false);
-          } else if (activeTab !== 'dashboard') {
+          } else if (state.activeTab !== 'dashboard') {
             setActiveTab('dashboard');
           } else {
             CapApp.exitApp();
           }
         });
+
+        if (cancelled) {
+          handle.remove().catch(() => {});
+        } else {
+          backButtonListener = handle;
+        }
       } catch (err) {
         console.warn('Native backButton listener not supported:', err);
       }
@@ -96,45 +130,73 @@ function App() {
     setupBackButton();
 
     return () => {
-      if (backButtonListener) {
-        backButtonListener.remove();
-      }
+      cancelled = true;
+      backButtonListener?.remove().catch(() => {});
     };
-  }, [selectedSubject, showHistory, showCalendar, activeTab, showSplash]);
+  }, []);
 
   // ── Load data in parallel with splash animation ──
   useEffect(() => {
+    let cancelled = false;
+    let actionListener: { remove: () => Promise<void> } | null = null;
+    let initSucceeded = false;
+    let resolveInit!: () => void;
+    const initDone = new Promise<void>((res) => {
+      resolveInit = res;
+    });
+
     const init = async () => {
-      await migrateStorageIfNeeded();
-      await Promise.all([
-        loadSettings(),
-        loadSubjects(),
-        loadRecords(),
-        loadArchivedSemesters(),
-      ]);
+      try {
+        await migrateStorageIfNeeded();
+        await Promise.all([
+          loadSettings(),
+          loadSubjects(),
+          loadRecords(),
+          loadArchivedSemesters(),
+        ]);
+        initSucceeded = true;
 
-      // Initialize notification action types (1-tap Present / Absent / Cancelled)
-      await initNotificationActionTypes();
+        const currentSubjects = useSubjects.getState().subjects;
+        const currentSettings = useSettings.getState().settings;
+        const currentRecords = useAttendance.getState().records;
 
-      // Schedule reminders after loading
-      const currentSubjects = useSubjects.getState().subjects;
-      const currentSettings = useSettings.getState().settings;
-      const currentRecords = useAttendance.getState().records;
-      if (currentSubjects.length > 0) {
-        await scheduleDailyClassReminders(currentSubjects, currentSettings, currentRecords);
+        if (!cancelled && currentSettings.appLockEnabled && currentSettings.appLockPin) {
+          setIsAppLocked(true);
+        }
+
+        await initNotificationActionTypes();
+
+        if (currentSubjects.length > 0) {
+          await scheduleDailyClassReminders(currentSubjects, currentSettings, currentRecords);
+        } else {
+          await cancelAllNotifications();
+          try {
+            if (!localStorage.getItem('bunkcalc_last_seen_version')) {
+              localStorage.setItem('bunkcalc_last_seen_version', APP_VERSION_NAME);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        if (!cancelled && currentSubjects.length === 0 && useSettings.getState().archivedSemesters.length === 0) {
+          setShowOnboarding(true);
+        }
+
+        if (currentSettings.autoUpdateCheck !== false) {
+          useUpdateStore.getState().checkForUpdates();
+        }
+      } catch (err) {
+        console.error('Initialization failed:', err);
+      } finally {
+        resolveInit();
+        if (!cancelled) {
+          setDataReady(true);
+        }
       }
-
-      if (currentSubjects.length === 0) {
-        setShowOnboarding(true);
-      }
-
-      // Silent version update check
-      useUpdateStore.getState().checkForUpdates();
-
-      setDataReady(true);
 
       // Preload Settings chunk quietly in the background so opening it is instantaneous
-      if (typeof window !== 'undefined') {
+      if (!cancelled && typeof window !== 'undefined') {
         setTimeout(() => {
           import('./pages/Settings').catch(() => {});
         }, 1000);
@@ -142,25 +204,32 @@ function App() {
     };
     init();
 
-    // Listen for 1-tap notification action clicks
-    let actionListener: { remove: () => Promise<void> } | null = null;
     const setupActionListener = async () => {
       try {
-        actionListener = await LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
+        const handle = await LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
           const actionId = action.actionId;
           const subjectId = action.notification.extra?.subjectId;
-          
+          const slot = typeof action.notification.extra?.slot === 'string' ? action.notification.extra.slot : undefined;
+
           if (subjectId && (actionId === 'mark_present' || actionId === 'mark_absent' || actionId === 'mark_cancelled')) {
+            await initDone;
+            if (!initSucceeded) return;
             const status: AttendanceStatus = actionId === 'mark_present' ? 'present' : actionId === 'mark_absent' ? 'absent' : 'cancelled';
             const todayStr = toISODateStr(new Date());
             await useAttendance.getState().markAttendance({
               id: uuidv4(),
               subjectId,
               date: todayStr,
+              slot,
               status,
             });
           }
         });
+        if (cancelled) {
+          handle.remove().catch(() => {});
+        } else {
+          actionListener = handle;
+        }
       } catch (err) {
         console.warn('LocalNotification action listener not supported:', err);
       }
@@ -168,7 +237,8 @@ function App() {
     setupActionListener();
 
     return () => {
-      if (actionListener) actionListener.remove();
+      cancelled = true;
+      actionListener?.remove().catch(() => {});
     };
   }, [loadSettings, loadSubjects, loadRecords, loadArchivedSemesters]);
 
@@ -178,15 +248,26 @@ function App() {
       return;
     }
 
+    let cancelled = false;
     let stateListener: { remove: () => Promise<void> } | null = null;
+
     const setupAppStateListener = async () => {
       try {
         const { App: CapApp } = await import('@capacitor/app');
-        stateListener = await CapApp.addListener('appStateChange', (state) => {
-          if (!state.isActive && settings?.appLockEnabled && settings?.appLockPin) {
+        const handle = await CapApp.addListener('appStateChange', (state) => {
+          if (state.isActive) {
+            clearAppLockSuppression();
+            return;
+          }
+          if (!shouldSuppressAppLock() && settings?.appLockEnabled && settings?.appLockPin) {
             setIsAppLocked(true);
           }
         });
+        if (cancelled) {
+          handle.remove().catch(() => {});
+        } else {
+          stateListener = handle;
+        }
       } catch (err) {
         console.warn('Native appStateChange listener not supported:', err);
       }
@@ -194,17 +275,31 @@ function App() {
     setupAppStateListener();
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && settings?.appLockEnabled && settings?.appLockPin) {
+      if (document.visibilityState === 'visible') {
+        clearAppLockSuppression();
+        return;
+      }
+      if (
+        document.visibilityState === 'hidden' &&
+        !shouldSuppressAppLock() &&
+        settings?.appLockEnabled &&
+        settings?.appLockPin
+      ) {
         setIsAppLocked(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      if (stateListener) stateListener.remove();
+      cancelled = true;
+      stateListener?.remove().catch(() => {});
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [settings?.appLockEnabled, settings?.appLockPin]);
+
+  const handleUnlock = useCallback(() => {
+    setIsAppLocked(false);
+  }, []);
 
   // ── Splash complete callback ──
   const handleSplashComplete = useCallback(() => {
@@ -288,7 +383,19 @@ function App() {
           <AppLockModal
             correctPin={settings.appLockPin}
             biometricsEnabled={settings?.biometricsEnabled !== false}
-            onSuccess={() => setIsAppLocked(false)}
+            onSuccess={handleUnlock}
+          />
+        )}
+
+        {/* Storage Error Alert */}
+        {activeStorageError && (
+          <AppModal
+            isOpen={true}
+            title="Storage Error"
+            message={activeStorageError}
+            type="error"
+            confirmText="OK"
+            onConfirm={clearAllStorageErrors}
           />
         )}
       </ErrorBoundary>

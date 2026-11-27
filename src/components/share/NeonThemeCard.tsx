@@ -55,9 +55,8 @@ export const NeonThemeCard: React.FC<ThemeCardProps> = ({
         <h2 style={{
           fontSize: '32px',
           fontWeight: 900,
-          background: 'linear-gradient(90deg, #60a5fa 0%, #a855f7 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
+          color: '#60a5fa',
+          textShadow: '0 0 24px rgba(168, 85, 247, 0.5)',
           fontStyle: 'italic',
           textTransform: 'uppercase',
           margin: 0,
@@ -158,9 +157,9 @@ export const NeonThemeCard: React.FC<ThemeCardProps> = ({
                   fontWeight: 900,
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  backgroundColor: stats.attendancePct >= 75 ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)',
-                  color: stats.attendancePct >= 75 ? '#4ade80' : '#f87171',
-                  border: stats.attendancePct >= 75 ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                  backgroundColor: stats.attendancePct >= (s.threshold ?? 0.75) * 100 ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+                  color: stats.attendancePct >= (s.threshold ?? 0.75) * 100 ? '#4ade80' : '#f87171',
+                  border: stats.attendancePct >= (s.threshold ?? 0.75) * 100 ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
                 }}>
                   {stats.attendancePct.toFixed(0)}%
                 </span>
@@ -168,6 +167,11 @@ export const NeonThemeCard: React.FC<ThemeCardProps> = ({
             </div>
           );
         })}
+        {subjectWithStats.length > 6 && (
+          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textAlign: 'center', margin: '2px 0 0 0' }}>
+            +{subjectWithStats.length - 6} more subject{subjectWithStats.length - 6 === 1 ? '' : 's'}
+          </p>
+        )}
       </div>
 
       {/* Footer */}

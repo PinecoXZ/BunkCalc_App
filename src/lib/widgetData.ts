@@ -1,6 +1,6 @@
 import { calculateOverallStats } from './calculations';
 import { saveToStorage } from './storage';
-import { toISODateStr } from './dateUtils';
+import { isSemesterEnded, toISODateStr } from './dateUtils';
 import type { Subject, AttendanceRecord, AppSettings, WidgetSyncData, WidgetClassItem } from './types';
 
 const calculateWidgetData = (
@@ -35,7 +35,7 @@ const calculateWidgetData = (
   const todayRecords = records.filter(r => r.date === todayStr);
   const todayClassItems: WidgetClassItem[] = [];
 
-  if (!isTodayHoliday) {
+  if (!isTodayHoliday && !isSemesterEnded(settings.semesterEndDate, todayStr)) {
     subjects.forEach((sub) => {
       const matchingSlots = (sub.schedule || []).filter(slot => Number(slot.day) === currentDay);
     matchingSlots.forEach(slot => {
@@ -44,7 +44,9 @@ const calculateWidgetData = (
       const durationMin = sub.isLab ? 120 : 60;
       const classEndVal = slotTimeVal + durationMin;
 
-      const record = todayRecords.find(r => r.subjectId === sub.id);
+      const record =
+        todayRecords.find(r => r.subjectId === sub.id && r.slot === slot.slot) ??
+        todayRecords.find(r => r.subjectId === sub.id && !r.slot);
       let status: WidgetClassItem['status'] = 'upcoming';
 
       if (record) {

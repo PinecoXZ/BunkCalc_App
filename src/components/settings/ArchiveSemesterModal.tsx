@@ -4,6 +4,7 @@ import type { Subject, AttendanceRecord, AppSettings, ArchivedSemester } from '.
 import { calculateOverallStats } from '../../lib/calculations';
 import { sanitizeName, validateArchiveName } from '../../lib/validation';
 import { saveToStorage } from '../../lib/storage';
+import { cancelAllNotifications } from '../../lib/notifications';
 
 interface Props {
   isOpen: boolean;
@@ -64,6 +65,8 @@ export const ArchiveSemesterModal: React.FC<Props> = ({
       await onArchive(archived);
       await saveToStorage('subjects', []);
       await saveToStorage('attendance_records', []);
+      await saveToStorage('app_settings', { ...settings, semesterEndDate: '' });
+      await cancelAllNotifications();
       onClose();
       window.location.reload();
     } catch {
@@ -74,9 +77,14 @@ export const ArchiveSemesterModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="archive-modal-title"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    >
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm space-y-4 shadow-2xl">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Archive Current Semester</h3>
+        <h3 id="archive-modal-title" className="text-lg font-bold text-slate-900 dark:text-white">Archive Current Semester</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Save your current attendance records and subjects into your archive history, then start a fresh semester.
         </p>

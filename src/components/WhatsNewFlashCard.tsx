@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { APP_VERSION_NAME } from '../lib/constants';
+import { registerBackHandler } from '../lib/backHandler';
 
 interface Props {
   isOpen: boolean;
@@ -7,16 +8,37 @@ interface Props {
 }
 
 export const WhatsNewFlashCard: React.FC<Props> = ({ isOpen, onClose }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerBackHandler(() => {
+      onClose();
+      return true;
+    });
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      unregister();
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-300">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="whats-new-title"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-300"
+    >
       <div className="neu-card rounded-3xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-[var(--neu-shadow-dark)]/15">
         {/* Header */}
         <div className="p-5 border-b border-[var(--neu-shadow-dark)]/10 flex justify-between items-center bg-[var(--neu-surface)]">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">
+              <h2 id="whats-new-title" className="text-lg font-black text-slate-900 dark:text-white">
                 What's New in BunkCalc
               </h2>
               <span className="neu-inset px-2.5 py-0.5 rounded-full text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase">
@@ -40,19 +62,28 @@ export const WhatsNewFlashCard: React.FC<Props> = ({ isOpen, onClose }) => {
         <div className="p-5 overflow-y-auto flex-1 space-y-3.5 text-xs">
           <div className="neu-flat-sm p-3.5 rounded-2xl border border-blue-500/20">
             <p className="font-bold text-blue-600 dark:text-blue-400 text-sm mb-1">
-              Auto-Update Engine &amp; Notifications (v2.2.6)
+              End-of-Semester Summary &amp; Archive Insights (v2.2.7)
             </p>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Multi-tiered update detection engine with direct GitHub release integration, immediate push notifications for new updates, manual update checking in Settings, and global update banners.
+              Once a semester ends, get a final attendance wrap-up with PDF export, end-date extension, and 1-tap transition to a new term—plus full subject breakdowns for archived semesters right inside Setup.
+            </p>
+          </div>
+
+          <div className="neu-flat-sm p-3.5 rounded-2xl border border-indigo-500/20">
+            <p className="font-bold text-indigo-600 dark:text-indigo-400 text-sm mb-1">
+              Multi-Slot Tracking &amp; Security Hardening
+            </p>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Independent slot-level tracking on multi-class days, PBKDF2 PIN hashing with lockout protection, and multi-page PDF attendance report generation.
             </p>
           </div>
 
           <div className="neu-flat-sm p-3.5 rounded-2xl border border-emerald-500/20">
             <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1">
-              Batch Attendance &amp; Performance
+              Auto-Update Engine &amp; Batch Performance
             </p>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Atomic batch state mutations for 1-tap &ldquo;Mark All Present&rdquo; and &ldquo;Clear Today&rdquo;, reducing disk I/O, widget sync, and notification rescheduling loops to O(1).
+              Multi-tiered update detection with GitHub release integration, atomic batch state mutations, and 1-tap &ldquo;Mark All Present&rdquo; sync.
             </p>
           </div>
 

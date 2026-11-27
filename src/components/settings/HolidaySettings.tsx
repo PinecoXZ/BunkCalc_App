@@ -4,10 +4,12 @@ import type { AppSettings, Holiday } from '../../lib/types';
 import SubHeader from './SubHeader';
 import { sanitizeName } from '../../lib/validation';
 import { parseICSFile, HOLIDAY_PRESETS } from '../../lib/icsParser';
+import { suppressAppLockTemporarily } from '../../lib/appLockBridge';
 
 interface HolidaySettingsProps {
   settings: AppSettings;
   addHoliday: (holiday: Holiday) => void;
+  addMultipleHolidays: (holidays: Holiday[]) => void;
   updateHoliday: (holiday: Holiday) => void;
   deleteHoliday: (id: string) => void;
   onBack: () => void;
@@ -24,6 +26,7 @@ interface HolidaySettingsProps {
 export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
   settings,
   addHoliday,
+  addMultipleHolidays,
   updateHoliday,
   deleteHoliday,
   onBack,
@@ -72,10 +75,11 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
             </div>
           )}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            <label htmlFor="holiday-name-input" className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
               {editingHoliday ? 'Edit Break Name' : 'Break Name'}
             </label>
             <input 
+              id="holiday-name-input"
               placeholder="e.g. Puja / Diwali Vacation" 
               value={holidayName}
               onChange={(e) => setHolidayName(e.target.value)}
@@ -84,8 +88,9 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Start Date</label>
+              <label htmlFor="holiday-start-input" className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Start Date</label>
               <input 
+                id="holiday-start-input"
                 type="date" 
                 value={holidayStart}
                 onChange={(e) => {
@@ -96,8 +101,9 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">End Date</label>
+              <label htmlFor="holiday-end-input" className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">End Date</label>
               <input 
+                id="holiday-end-input"
                 type="date" 
                 value={holidayEnd}
                 onChange={(e) => setHolidayEnd(e.target.value)}
@@ -164,14 +170,13 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                   if (isNaN(presetIndex) || presetIndex < 0) return;
                   const preset = HOLIDAY_PRESETS[presetIndex];
                   if (!preset) return;
-                  preset.holidays.forEach(h => {
-                    addHoliday({
-                      id: uuidv4(),
-                      name: h.name,
-                      startDate: h.startDate,
-                      endDate: h.endDate,
-                    });
-                  });
+                  const holidaysToAdd = preset.holidays.map(h => ({
+                    id: uuidv4(),
+                    name: h.name,
+                    startDate: h.startDate,
+                    endDate: h.endDate,
+                  }));
+                  addMultipleHolidays(holidaysToAdd);
                   onShowModal({
                     isOpen: true,
                     title: "Preset Applied",
@@ -191,7 +196,10 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                 ))}
               </select>
 
-              <label className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-1.5">
+              <label
+                onClick={() => suppressAppLockTemporarily()}
+                className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-1.5"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -217,7 +225,7 @@ export const HolidaySettings: React.FC<HolidaySettingsProps> = ({
                         });
                         return;
                       }
-                      parsed.forEach(h => addHoliday(h));
+                      addMultipleHolidays(parsed);
                       onShowModal({
                         isOpen: true,
                         title: "Calendar Imported",

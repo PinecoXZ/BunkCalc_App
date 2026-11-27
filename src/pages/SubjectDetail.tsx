@@ -56,7 +56,12 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [records, currentSubject.id]);
   
-  const projections = useMemo(() => calculateSubjectStats(currentSubject, records, settings.semesterEndDate, settings.holidays), [currentSubject, records, settings.semesterEndDate, settings.holidays]);
+  const projections = useMemo(
+    () => calculateSubjectStats(currentSubject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold),
+    [currentSubject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]
+  );
+  const effectiveThreshold = currentSubject.threshold ?? settings.globalThreshold;
+  const needsRecovery = projections.bunkBudget < 0;
 
   return (
     <div className="min-h-screen bg-[var(--neu-bg)] text-slate-900 dark:text-white p-6 pb-28">
@@ -87,20 +92,22 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="neu-card rounded-3xl p-5">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2">Attendance</p>
-          <p className={`text-3xl font-black tracking-tight ${getStatusColor(projections.attendancePct, currentSubject.threshold)}`}>
+          <p className={`text-3xl font-black tracking-tight ${getStatusColor(projections.attendancePct, effectiveThreshold)}`}>
             {projections.attendancePct.toFixed(1)}%
           </p>
-          <p className="text-[10px] text-slate-400 font-bold mt-1">Goal: {Math.round(currentSubject.threshold * 100)}%</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Goal: {Math.round(effectiveThreshold * 100)}%</p>
         </div>
         <div className="neu-card rounded-3xl p-5">
-          <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2">Bunk Budget</p>
-          <p className={`text-3xl font-black tracking-tight ${projections.bunkBudget >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {projections.bunkBudget >= 0 
+          <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-2">
+            {needsRecovery ? 'Recovery Needed' : 'Bunk Budget'}
+          </p>
+          <p className={`text-3xl font-black tracking-tight ${!needsRecovery ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {!needsRecovery
               ? (projections.bunkBudget > 0 ? `+${projections.bunkBudget}` : '0') 
               : projections.classesNeededToRecover}
           </p>
           <p className="text-[10px] text-slate-400 font-bold mt-1">
-            {projections.bunkBudget >= 0 
+            {!needsRecovery
               ? (currentSubject.isLab ? 'Safe labs' : 'Safe classes') 
               : (currentSubject.isLab ? 'Labs to recover' : 'Classes to recover')}
           </p>
@@ -110,7 +117,7 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
       <section className="mb-8">
         <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3.5">Attendance Math</h2>
         <div className="space-y-3.5">
-          {(projections.bunkBudget < 0 || projections.attendancePct < currentSubject.threshold * 100) && (
+          {needsRecovery && (
             <div className="neu-card rounded-3xl p-4.5 flex items-center gap-4 border-l-4 border-rose-500">
               <div className="w-12 h-12 rounded-2xl neu-inset flex items-center justify-center shrink-0 text-rose-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,7 +127,7 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
               <div>
                 <p className="text-sm font-bold text-rose-600 dark:text-rose-400">Recovery Mode</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                  Attend the next <span className="font-black text-rose-600 dark:text-rose-400 underline">{projections.classesNeededToRecover}</span> {currentSubject.isLab ? (projections.classesNeededToRecover === 1 ? 'lab' : 'labs') : (projections.classesNeededToRecover === 1 ? 'class' : 'classes')} consecutively to reach {Math.round(currentSubject.threshold * 100)}%.
+                  Attend the next <span className="font-black text-rose-600 dark:text-rose-400 underline">{projections.classesNeededToRecover}</span> {currentSubject.isLab ? (projections.classesNeededToRecover === 1 ? 'lab' : 'labs') : (projections.classesNeededToRecover === 1 ? 'class' : 'classes')} consecutively to reach {Math.round(effectiveThreshold * 100)}%.
                 </p>
               </div>
             </div>
@@ -151,7 +158,10 @@ const SubjectDetail: React.FC<Props> = ({ subject: initialSubject, onBack }) => 
             subjectRecords.map((record) => (
               <div key={record.id} className="neu-flat-sm rounded-2xl p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{parseLocalDate(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    {parseLocalDate(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
+                    {record.slot ? <span className="text-xs font-semibold text-blue-500 ml-1.5">• {record.slot}</span> : null}
+                  </p>
                   {record.status !== 'cancelled' ? (
                     <button 
                       onClick={() => markAttendance({ ...record, status: record.status === 'present' ? 'absent' : 'present' })}

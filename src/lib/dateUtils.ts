@@ -2,6 +2,23 @@ import type { ScheduleSlot, AttendanceRecord, Holiday } from './types';
 export const toISODateStr = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+/** Normalizes an ISO date or timestamp string into YYYY-MM-DD, or '' if invalid. */
+export const normalizeISODate = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const clean = (dateStr.includes('T') ? dateStr.split('T')[0] : dateStr).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(clean) ? clean : '';
+};
+
+/** Returns true when semesterEndDate is configured and strictly before referenceDateStr. */
+export const isSemesterEnded = (
+  semesterEndDate?: string,
+  referenceDateStr: string = toISODateStr(new Date())
+): boolean => {
+  const cleanEnd = normalizeISODate(semesterEndDate);
+  if (!cleanEnd) return false;
+  return referenceDateStr > cleanEnd;
+};
+
 /**
  * Count remaining class sessions from today (or tomorrow if today is marked) to semesterEndDate,
  * automatically excluding dates that fall within specified college holidays/exams.
@@ -32,17 +49,16 @@ export const countRemainingSessions = (
   const now = new Date();
   const current = new Date(now);
   current.setHours(0, 0, 0, 0);
+  const todayStr = toISODateStr(now);
 
-  // If today's attendance for this subject has already been marked, skip today's slot in remaining count
-  if (subjectId) {
-    const todayStr = toISODateStr(now);
-    const isTodayMarked = records.some(
-      (r) => r.subjectId === subjectId && r.date === todayStr
-    );
-    if (isTodayMarked) {
-      current.setDate(current.getDate() + 1);
-    }
-  }
+  // Determine how much of today's scheduled slots for this subject are already marked
+  const todayRecords = subjectId
+    ? records.filter((r) => r.subjectId === subjectId && r.date === todayStr)
+    : [];
+  const hasLegacyTodayRecord = todayRecords.some((r) => !r.slot);
+  const markedTodaySlots = new Set(
+    todayRecords.map((r) => r.slot).filter((s): s is string => Boolean(s))
+  );
 
   const multiplier = isLab ? 2 : 1;
   let sessionCount = 0;
@@ -54,7 +70,18 @@ export const countRemainingSessions = (
     
     if (!isHoliday) {
       const day = current.getDay();
-      const classesOnDay = schedule.filter(s => Number(s.day) === day).length;
+      const daySlots = schedule.filter((s) => Number(s.day) === day);
+      let classesOnDay = daySlots.length;
+
+      if (currentStr === todayStr && subjectId) {
+        if (hasLegacyTodayRecord) {
+          classesOnDay = 0;
+        } else if (markedTodaySlots.size > 0) {
+          const unmarkedBySlot = daySlots.filter((s) => !markedTodaySlots.has(s.slot)).length;
+          classesOnDay = Math.min(unmarkedBySlot, Math.max(0, daySlots.length - markedTodaySlots.size));
+        }
+      }
+
       sessionCount += classesOnDay * multiplier;
     }
     

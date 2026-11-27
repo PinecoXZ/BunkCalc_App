@@ -1,5 +1,5 @@
-export const APP_VERSION_CODE = 13;
-export const APP_VERSION_NAME = '2.2.6';
+export const APP_VERSION_CODE = 14;
+export const APP_VERSION_NAME = '2.2.7';
 
 // GitHub Repository & Release Endpoints
 export const GITHUB_REPO_OWNER = 'PinecoXZ';

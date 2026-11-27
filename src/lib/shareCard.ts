@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
+import { suppressAppLockTemporarily } from './appLockBridge';
 
 export const shareAttendanceCard = async (): Promise<{ success: boolean; method?: 'native' | 'web-share' | 'download'; error?: string }> => {
   const element = document.getElementById('share-card');
@@ -55,6 +56,7 @@ export const shareAttendanceCard = async (): Promise<{ success: boolean; method?
           directory: Directory.Cache,
         });
 
+        suppressAppLockTemporarily();
         await Share.share({
           title: 'BunkCalc Attendance Report',
           text: 'Check out my attendance stats!',

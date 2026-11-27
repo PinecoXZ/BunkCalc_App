@@ -3,13 +3,13 @@ import { validateImportPayload } from './validation';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { calculateSubjectStats } from './calculations';
+import { calculateSubjectStats, calculateOverallStats } from './calculations';
 import { toISODateStr } from './dateUtils';
 import type { Subject, AttendanceRecord, AppSettings } from './types';
 import { APP_VERSION_NAME } from './constants';
-
-const escapeHtml = (str: string): string =>
-  str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+import { suppressAppLockTemporarily } from './appLockBridge';
+import { cancelAllNotifications } from './notifications';
+import { buildAttendanceReportPdf } from './pdfReport';
 
 const escapeCsvField = (field: string): string => {
   if (/[,"\n\r]/.test(field) || /^[=+\-@\t\r]/.test(field)) {
@@ -18,12 +18,13 @@ const escapeCsvField = (field: string): string => {
   return field;
 };
 
-const toBase64 = (str: string): string => {
-  const bytes = new TextEncoder().encode(str);
+const bytesToBase64 = (bytes: Uint8Array): string => {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
 };
+
+const toBase64 = (str: string): string => bytesToBase64(new TextEncoder().encode(str));
 
 const STORAGE_VERSION = 3;
 
@@ -36,11 +37,18 @@ export const saveToStorage = async (key: string, value: unknown) => {
 
 export const getFromStorage = async <T>(key: string): Promise<T | null> => {
   const { value } = await Preferences.get({ key });
-  return value ? JSON.parse(value) : null;
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch (err) {
+    console.warn(`Corrupted storage JSON for key "${key}", ignoring:`, err);
+    return null;
+  }
 };
 
 
 export const clearAllStorage = async () => {
+  await cancelAllNotifications();
   await Preferences.clear();
 };
 
@@ -77,8 +85,13 @@ export const migrateStorageIfNeeded = async () => {
 export const exportAppState = async () => {
   const subjects = await getFromStorage('subjects');
   const attendance = await getFromStorage('attendance_records');
-  const settings = await getFromStorage('app_settings');
+  const rawSettings = await getFromStorage<AppSettings>('app_settings');
   const archived = await getFromStorage('archived_semesters');
+
+  // Scrub PIN hash & lock flag from exported backups to avoid leaking PIN material or locking out restored devices
+  const settings = rawSettings
+    ? { ...rawSettings, appLockPin: undefined, appLockEnabled: false }
+    : rawSettings;
 
   const data = {
     subjects,
@@ -102,6 +115,7 @@ export const exportAppState = async () => {
         directory: Directory.Cache,
       });
 
+      suppressAppLockTemporarily();
       await Share.share({
         title: 'BunkCalc Backup',
         text: 'My BunkCalc Attendance Backup file.',
@@ -185,6 +199,7 @@ export const exportToCSV = async () => {
         directory: Directory.Cache,
       });
 
+      suppressAppLockTemporarily();
       await Share.share({
         title: 'BunkCalc CSV Report',
         text: 'My BunkCalc Attendance Report.',
@@ -213,97 +228,75 @@ export const exportToPDF = async () => {
   const subjects = (await getFromStorage<Subject[]>('subjects')) || [];
   const attendance = (await getFromStorage<AttendanceRecord[]>('attendance_records')) || [];
   const settings = await getFromStorage<AppSettings>('app_settings');
-  
-  let html = `<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>BunkCalc Attendance Report</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #1e293b; background: #ffffff; }
-          h1 { text-align: center; color: #2563eb; margin-bottom: 4px; font-size: 24px; font-weight: 800; }
-          .date { text-align: center; color: #64748b; margin-bottom: 24px; font-size: 12px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
-          th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; }
-          th { background-color: #f8fafc; font-weight: 700; color: #475569; }
-          .footer { text-align: center; margin-top: 32px; font-size: 11px; color: #94a3b8; }
-        </style>
-      </head>
-      <body>
-        <h1>BunkCalc Attendance Report</h1>
-        <div class="date">Generated on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th>Attended / Total</th>
-              <th>Percentage</th>
-              <th>Bunk Budget</th>
-            </tr>
-          </thead>
-          <tbody>
-  `;
-  
-  subjects.forEach(subject => {
-    const stats = calculateSubjectStats(subject, attendance, settings?.semesterEndDate, settings?.holidays);
-    html += `
-      <tr>
-        <td><strong>${escapeHtml(subject.name)}</strong>${subject.isLab ? ' (Lab)' : ''}</td>
-        <td>${stats.attendedCount} / ${stats.totalClasses}</td>
-        <td>${stats.attendancePct.toFixed(1)}%</td>
-        <td>${stats.bunkBudget >= 0 ? `${stats.bunkBudget} safe` : `Need ${stats.classesNeededToRecover}`}</td>
-      </tr>
-    `;
+
+  const overall = calculateOverallStats(
+    subjects,
+    attendance,
+    settings?.semesterEndDate || '',
+    settings?.holidays || [],
+    settings?.globalThreshold ?? 0.75
+  );
+
+  const pdfBytes = buildAttendanceReportPdf({
+    title: 'BunkCalc Attendance Report',
+    subtitle: `Generated on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+    summaryLine: `Overall: ${overall.percentage}% (${overall.totalAttended}/${overall.totalClasses}) | Safe Bunks: ${overall.totalSafeBunks}`,
+    rows: subjects.map((subject) => {
+      const stats = calculateSubjectStats(
+        subject,
+        attendance,
+        settings?.semesterEndDate,
+        settings?.holidays,
+        settings?.globalThreshold
+      );
+      return {
+        subjectName: `${subject.name}${subject.isLab ? ' (Lab)' : ''}`,
+        attended: stats.attendedCount,
+        total: stats.totalClasses,
+        percentage: `${stats.attendancePct.toFixed(1)}%`,
+        budgetLabel: stats.bunkBudget >= 0 ? `${stats.bunkBudget} safe` : `Need ${stats.classesNeededToRecover}`,
+      };
+    }),
+    footer: `Generated by BunkCalc v${APP_VERSION_NAME} - Offline Attendance Tracker`,
   });
-  
-  html += `
-          </tbody>
-        </table>
-        <div class="footer">Generated by BunkCalc — Smart Attendance Tracker</div>
-      </body>
-    </html>
-  `;
-  
-  const fileName = `bunkcalc_report_${toISODateStr(new Date())}.html`;
+
+  const fileName = `bunkcalc_report_${toISODateStr(new Date())}.pdf`;
 
   if (Capacitor.isNativePlatform()) {
     try {
-      const base64Data = toBase64(html);
+      const base64Data = bytesToBase64(pdfBytes);
       const savedFile = await Filesystem.writeFile({
         path: fileName,
         data: base64Data,
         directory: Directory.Cache,
       });
 
+      suppressAppLockTemporarily();
       await Share.share({
         title: 'BunkCalc Attendance Report',
-        text: 'My BunkCalc Attendance Report.',
+        text: 'My BunkCalc Attendance Report (PDF).',
         files: [savedFile.uri],
         dialogTitle: 'Share Attendance Report',
       });
       return;
     } catch (err) {
-      console.error('Native document share failed, falling back to print window:', err);
+      console.error('Native PDF share failed, falling back to browser download:', err);
     }
   }
 
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  } else {
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+  const pdfBuffer = pdfBytes.buffer.slice(
+    pdfBytes.byteOffset,
+    pdfBytes.byteOffset + pdfBytes.byteLength
+  ) as ArrayBuffer;
+  const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 

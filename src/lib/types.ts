@@ -26,6 +26,7 @@ export interface AttendanceRecord {
   id: string;
   subjectId: string;
   date: string; // ISO "2026-05-20"
+  slot?: string; // Optional "HH:MM" slot identifier for multi-slot days
   status: AttendanceStatus;
 }
 
@@ -97,6 +98,7 @@ export interface AppSettings {
   theme: ThemeMode;
   themeAccent?: ThemeAccent;
   toneMode?: 'standard' | 'meme';
+  autoUpdateCheck?: boolean;
   holidays?: Holiday[];
 }
 

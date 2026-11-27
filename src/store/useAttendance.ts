@@ -15,6 +15,8 @@ interface LastAction {
 interface AttendanceState {
   records: AttendanceRecord[];
   lastAction: LastAction | null;
+  storageError: string | null;
+  clearStorageError: () => void;
   markAttendance: (record: AttendanceRecord) => Promise<void>;
   markMultipleAttendance: (records: AttendanceRecord[]) => Promise<void>;
   unmarkAttendance: (id: string) => Promise<void>;
@@ -26,24 +28,32 @@ interface AttendanceState {
   deleteRecordsForSubject: (subjectId: string) => Promise<void>;
 }
 
+const matchesRecordTarget = (existing: AttendanceRecord, target: AttendanceRecord): boolean => {
+  if (existing.subjectId !== target.subjectId || existing.date !== target.date) return false;
+  if (!target.slot || !existing.slot) return true;
+  return existing.slot === target.slot;
+};
+
 export const useAttendance = create<AttendanceState>((set, get) => ({
   records: [],
   lastAction: null,
+  storageError: null,
+  clearStorageError: () => set({ storageError: null }),
   markAttendance: async (record) => {
+    const previousState = { records: get().records, lastAction: get().lastAction };
     let oldRecords: AttendanceRecord[] = [];
     let newRecords: AttendanceRecord[] = [];
     let previousRecord: AttendanceRecord | null = null;
     
     set((state) => {
       oldRecords = state.records;
-      previousRecord = oldRecords.find(
-        r => r.subjectId === record.subjectId && r.date === record.date
-      ) || null;
-      const filtered = oldRecords.filter(r => !(r.subjectId === record.subjectId && r.date === record.date));
+      previousRecord = oldRecords.find(r => matchesRecordTarget(r, record)) || null;
+      const filtered = oldRecords.filter(r => !matchesRecordTarget(r, record));
       newRecords = [...filtered, record];
       return { 
         records: newRecords,
-        lastAction: { record, previousRecord }
+        lastAction: { record, previousRecord },
+        storageError: null,
       };
     });
 
@@ -51,6 +61,12 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       await saveToStorage('attendance_records', newRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to save attendance record to device storage.',
+      });
+      return;
     }
 
     // Advanced Notifications logic
@@ -62,7 +78,8 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
         subject, 
         oldRecords, 
         newRecords, 
-        settings
+        settings,
+        record.slot
       );
     }
     // Re-sync scheduled class reminders and widgets to ensure marked classes are updated
@@ -70,17 +87,20 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
   },
   markMultipleAttendance: async (newEntries) => {
     if (newEntries.length === 0) return;
+    const previousState = { records: get().records, lastAction: get().lastAction };
     let oldRecords: AttendanceRecord[] = [];
     let updatedRecords: AttendanceRecord[] = [];
 
     set((state) => {
       oldRecords = state.records;
-      const keySet = new Set(newEntries.map(e => `${e.subjectId}_${e.date}`));
-      const remaining = oldRecords.filter(r => !keySet.has(`${r.subjectId}_${r.date}`));
+      const remaining = oldRecords.filter(
+        r => !newEntries.some(entry => matchesRecordTarget(r, entry))
+      );
       updatedRecords = [...remaining, ...newEntries];
       return {
         records: updatedRecords,
         lastAction: null,
+        storageError: null,
       };
     });
 
@@ -88,21 +108,30 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       await saveToStorage('attendance_records', updatedRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to save attendance records to device storage.',
+      });
+      return;
     }
 
     const allSubjects = useSubjects.getState().subjects;
     const settings = useSettings.getState().settings;
 
+    const alertedSubjectIds = new Set<string>();
     for (const entry of newEntries) {
       const subject = allSubjects.find(s => s.id === entry.subjectId);
-      if (subject) {
-        await handleAttendanceAlerts(subject, oldRecords, updatedRecords, settings);
+      if (subject && !alertedSubjectIds.has(subject.id)) {
+        alertedSubjectIds.add(subject.id);
+        await handleAttendanceAlerts(subject, oldRecords, updatedRecords, settings, entry.slot);
       }
     }
 
     await syncNotificationsAndWidgets(allSubjects, settings, updatedRecords);
   },
   unmarkAttendance: async (id) => {
+    const previousState = { records: get().records, lastAction: get().lastAction };
     let oldRecords: AttendanceRecord[] = [];
     let newRecords: AttendanceRecord[] = [];
     let record: AttendanceRecord | undefined;
@@ -113,7 +142,8 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       newRecords = oldRecords.filter((r) => r.id !== id);
       return { 
         records: newRecords,
-        lastAction: record ? { record, previousRecord: record } : null
+        lastAction: record ? { record, previousRecord: record } : null,
+        storageError: null,
       };
     });
     
@@ -121,6 +151,12 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       await saveToStorage('attendance_records', newRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to remove attendance record from device storage.',
+      });
+      return;
     }
 
     const allSubjects = useSubjects.getState().subjects;
@@ -133,7 +169,8 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
           subject, 
           oldRecords, 
           newRecords, 
-          settings
+          settings,
+          targetRecord.slot
         );
       }
     }
@@ -141,6 +178,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
   },
   unmarkMultipleAttendance: async (recordIds) => {
     if (recordIds.length === 0) return;
+    const previousState = { records: get().records, lastAction: get().lastAction };
     let updatedRecords: AttendanceRecord[] = [];
     const idSet = new Set(recordIds);
 
@@ -149,6 +187,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       return {
         records: updatedRecords,
         lastAction: null,
+        storageError: null,
       };
     });
 
@@ -156,6 +195,12 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
       await saveToStorage('attendance_records', updatedRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to clear attendance records from device storage.',
+      });
+      return;
     }
 
     const allSubjects = useSubjects.getState().subjects;
@@ -166,25 +211,30 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     const { lastAction } = get();
     if (!lastAction) return;
 
+    const previousState = { records: get().records, lastAction };
     const { record, previousRecord } = lastAction;
     let oldRecords: AttendanceRecord[] = [];
     let newRecords: AttendanceRecord[] = [];
 
     set((state) => {
       oldRecords = state.records;
-      newRecords = oldRecords.filter(
-        r => !(r.subjectId === record.subjectId && r.date === record.date)
-      );
+      newRecords = oldRecords.filter(r => !matchesRecordTarget(r, record));
       if (previousRecord) {
         newRecords = [...newRecords, previousRecord];
       }
-      return { records: newRecords, lastAction: null };
+      return { records: newRecords, lastAction: null, storageError: null };
     });
 
     try {
       await saveToStorage('attendance_records', newRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to undo attendance change in device storage.',
+      });
+      return;
     }
 
     const allSubjects = useSubjects.getState().subjects;
@@ -193,7 +243,7 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     // Sync threshold alerts after undo
     const subject = allSubjects.find(s => s.id === record.subjectId);
     if (subject) {
-      await handleAttendanceAlerts(subject, oldRecords, newRecords, settings);
+      await handleAttendanceAlerts(subject, oldRecords, newRecords, settings, record.slot);
     }
 
     await syncNotificationsAndWidgets(allSubjects, settings, newRecords);
@@ -202,15 +252,22 @@ export const useAttendance = create<AttendanceState>((set, get) => ({
     set({ lastAction: null });
   },
   deleteRecordsForSubject: async (subjectId) => {
+    const previousState = { records: get().records, lastAction: get().lastAction };
     set((state) => ({
       records: state.records.filter(r => r.subjectId !== subjectId),
       lastAction: null,
+      storageError: null,
     }));
     const newRecords = get().records;
     try {
       await saveToStorage('attendance_records', newRecords);
     } catch (err) {
       console.error('Failed to persist attendance_records:', err);
+      set({
+        records: previousState.records,
+        lastAction: previousState.lastAction,
+        storageError: 'Failed to delete subject records from device storage.',
+      });
     }
   },
   loadRecords: async () => {

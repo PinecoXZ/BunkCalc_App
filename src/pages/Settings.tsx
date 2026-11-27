@@ -25,6 +25,7 @@ const LegalModal = lazy(() => import('../components/LegalModal'));
 const FaqSection = lazy(() => import('../components/FaqSection'));
 
 import { Share } from '@capacitor/share';
+import { suppressAppLockTemporarily } from '../lib/appLockBridge';
 
 type SubPage = 
   | 'academic'
@@ -40,12 +41,12 @@ type SubPage =
   | null;
 
 const Settings: React.FC = () => {
-  const { settings, setSettings, addHoliday, updateHoliday, deleteHoliday, archivedSemesters, archiveSemester, deleteArchivedSemester } = useSettings();
-  const { subjects, deleteSubject } = useSubjects();
+  const { settings, setSettings, addHoliday, addMultipleHolidays, updateHoliday, deleteHoliday, archivedSemesters, archiveSemester, deleteArchivedSemester } = useSettings();
+  const { subjects, deleteSubject, updateAllSubjectsThreshold } = useSubjects();
   const { records } = useAttendance();
   const [activeSubPage, setActiveSubPage] = useState<SubPage>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pinModalMode, setPinModalMode] = useState<'set' | 'change' | null>(null);
+  const [pinModalMode, setPinModalMode] = useState<'set' | 'change' | 'disable' | null>(null);
 
   const [legal, setLegal] = useState<{ title: string; type: 'privacy' | 'terms' } | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -97,6 +98,7 @@ const Settings: React.FC = () => {
 
   const handleShare = async () => {
     try {
+      suppressAppLockTemporarily();
       await Share.share({
         title: 'BunkCalc — Smart Attendance Tracker',
         text: 'Bunking classes without stressing about attendance? Try BunkCalc!\n\nCalculate your safe bunk budget in real-time, get danger-zone alerts, and stay safe without detention risk.\n\nCheck it out here:',
@@ -106,6 +108,29 @@ const Settings: React.FC = () => {
     } catch (err) {
       console.warn('Sharing failed', err);
     }
+  };
+
+  const handleShowSubModal = (m: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'error' | 'alert' | 'success' | 'confirm';
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }) => {
+    setModal({
+      ...m,
+      onConfirm: () => {
+        setModal(null);
+        m.onConfirm();
+      },
+      onCancel: () => {
+        setModal(null);
+        m.onCancel?.();
+      },
+    });
   };
 
   const handleFeedback = () => {
@@ -185,9 +210,10 @@ const Settings: React.FC = () => {
               <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* Academic & Goals */}
                 {(!searchQuery || 'academic thresholds target goal semester attendance buffer'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('academic')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -208,14 +234,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Holidays & Breaks */}
                 {(!searchQuery || 'holidays breaks exam vacation exclusions presets ics'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('holidays')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -236,14 +263,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Sync & Calendar Export */}
                 {(!searchQuery || 'sync calendar widgets ics google apple outlook lock screen'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('sync')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-purple-600 dark:text-purple-400 flex items-center justify-center">
@@ -259,14 +287,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Manage Subjects */}
                 {(!searchQuery || 'subjects courses manage credits faculty room timetable'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('subjects')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
@@ -287,7 +316,7 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
               </div>
             </div>
@@ -302,9 +331,10 @@ const Settings: React.FC = () => {
               <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* Notifications */}
                 {(!searchQuery || 'notifications push alerts reminder pre-class morning digest sunday'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('notifications')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -325,14 +355,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Security & PIN Lock */}
                 {(!searchQuery || 'security pin lock passcode protection privacy'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('security')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -353,14 +384,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Appearance & Themes */}
                 {(!searchQuery || 'appearance theme dark light accent color palette haptics vibration'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('appearance')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-rose-600 dark:text-rose-400 flex items-center justify-center">
@@ -381,14 +413,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* Data & Backup */}
                 {(!searchQuery || 'data backup restore csv pdf export archive reset clear json'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('data')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-slate-600 dark:text-slate-400 flex items-center justify-center">
@@ -404,7 +437,7 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
               </div>
             </div>
@@ -419,9 +452,10 @@ const Settings: React.FC = () => {
               <div className="neu-card rounded-3xl divide-y divide-slate-200/60 dark:divide-slate-800/60 overflow-hidden">
                 {/* FAQ */}
                 {(!searchQuery || 'faq questions formulas guide attendance rules'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('faq')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-teal-600 dark:text-teal-400 flex items-center justify-center">
@@ -437,14 +471,15 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
 
                 {/* About & Support */}
                 {(!searchQuery || 'about support legal version rate share feedback github privacy terms'.includes(searchQuery.toLowerCase())) && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActiveSubPage('about')}
-                    className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
+                    className="w-full text-left p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer active:scale-[0.99] transition-all"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="neu-flat-sm w-11 h-11 rounded-2xl text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -460,7 +495,7 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                     <ThemedIcon name="chevronRight" size={16} className="text-slate-400 dark:text-slate-600" />
-                  </div>
+                  </button>
                 )}
               </div>
             </div>
@@ -473,7 +508,7 @@ const Settings: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">BunkCalc v{APP_VERSION_NAME}</span>
             </div>
             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-              Zero Internet Needed &bull; 100% Private Offline Storage
+              100% Local Data Storage &bull; Zero Tracking &bull; Zero Ads
             </p>
           </footer>
         </div>
@@ -483,6 +518,18 @@ const Settings: React.FC = () => {
       {activeSubPage === 'academic' && (
         <AcademicSettings
           settings={settings}
+          subjects={subjects}
+          onApplyThresholdToAllSubjects={async (threshold) => {
+            await updateAllSubjectsThreshold(threshold);
+            handleShowSubModal({
+              isOpen: true,
+              title: 'Thresholds Updated',
+              message: `Applied ${Math.round(threshold * 100)}% threshold to all ${subjects.length} subjects.`,
+              type: 'success',
+              confirmText: 'OK',
+              onConfirm: () => {},
+            });
+          }}
           setSettings={setSettings}
           onBack={() => setActiveSubPage(null)}
         />
@@ -493,10 +540,11 @@ const Settings: React.FC = () => {
         <HolidaySettings
           settings={settings}
           addHoliday={addHoliday}
+          addMultipleHolidays={addMultipleHolidays}
           updateHoliday={updateHoliday}
           deleteHoliday={deleteHoliday}
           onBack={() => setActiveSubPage(null)}
-          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+          onShowModal={handleShowSubModal}
         />
       )}
 
@@ -507,7 +555,7 @@ const Settings: React.FC = () => {
           settings={settings}
           records={records}
           onBack={() => setActiveSubPage(null)}
-          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+          onShowModal={handleShowSubModal}
         />
       )}
 
@@ -517,7 +565,7 @@ const Settings: React.FC = () => {
           settings={settings}
           setSettings={setSettings}
           onBack={() => setActiveSubPage(null)}
-          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+          onShowModal={handleShowSubModal}
         />
       )}
 
@@ -528,7 +576,7 @@ const Settings: React.FC = () => {
           setSettings={setSettings}
           onBack={() => setActiveSubPage(null)}
           onOpenPinModal={(mode) => setPinModalMode(mode)}
-          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+          onShowModal={handleShowSubModal}
         />
       )}
 
@@ -557,7 +605,7 @@ const Settings: React.FC = () => {
           deleteArchivedSemester={deleteArchivedSemester}
           onBack={() => setActiveSubPage(null)}
           onOpenArchiveModal={() => setShowArchiveModal(true)}
-          onShowModal={(m) => setModal({ ...m, onCancel: () => setModal(null) })}
+          onShowModal={handleShowSubModal}
         />
       )}
 
@@ -631,7 +679,7 @@ const Settings: React.FC = () => {
         />
       )}
 
-      {/* Visual PIN Setup / Change Modal */}
+      {/* Visual PIN Setup / Change / Disable Modal */}
       {pinModalMode && (
         <PinSetupModal
           isOpen={true}
@@ -639,6 +687,23 @@ const Settings: React.FC = () => {
           currentPin={settings.appLockPin}
           onClose={() => setPinModalMode(null)}
           onSuccess={(pin) => {
+            if (pinModalMode === 'disable') {
+              setSettings({
+                ...settings,
+                appLockEnabled: false,
+                appLockPin: undefined,
+              });
+              setPinModalMode(null);
+              setModal({
+                isOpen: true,
+                title: "App Lock Disabled",
+                message: "4-digit PIN protection has been turned off.",
+                type: "success",
+                confirmText: "OK",
+                onConfirm: () => setModal(null)
+              });
+              return;
+            }
             setSettings({
               ...settings,
               appLockEnabled: true,

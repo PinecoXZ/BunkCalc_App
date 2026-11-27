@@ -54,6 +54,7 @@ const BottomNav: React.FC<Props> = ({ activeTab, setActiveTab }) => {
                 <ThemedIcon
                   name={tab.icon}
                   size={20}
+                  weight={isActive ? 'Filled' : 'Outline'}
                   color={isActive ? undefined : 'currentColor'}
                   className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}
                 />

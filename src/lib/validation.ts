@@ -78,7 +78,7 @@ function isString(val: unknown): val is string {
 }
 
 function isNumber(val: unknown): val is number {
-  return typeof val === 'number' && !isNaN(val);
+  return typeof val === 'number' && Number.isFinite(val);
 }
 
 function isBoolean(val: unknown): val is boolean {
@@ -151,6 +151,7 @@ function validateAttendanceRecord(rec: unknown): { valid: boolean; data?: Attend
   if (!isString(r.subjectId) || !r.subjectId.trim()) return { valid: false };
   if (!isString(r.date) || !DATE_REGEX.test(r.date)) return { valid: false };
   if (r.status !== 'present' && r.status !== 'absent' && r.status !== 'cancelled') return { valid: false };
+  const validSlot = isString(r.slot) && TIME_REGEX.test(r.slot) ? r.slot : undefined;
   
   return {
     valid: true,
@@ -158,6 +159,7 @@ function validateAttendanceRecord(rec: unknown): { valid: boolean; data?: Attend
       id: r.id.trim(),
       subjectId: r.subjectId.trim(),
       date: r.date,
+      slot: validSlot,
       status: r.status
     }
   };
@@ -202,13 +204,19 @@ function validateSettings(set: unknown): { valid: boolean; data?: AppSettings } 
     theme: theme as AppSettings['theme'],
     themeAccent,
     toneMode: s.toneMode === 'meme' ? 'meme' : 'standard',
+    autoUpdateCheck: typeof s.autoUpdateCheck === 'boolean' ? s.autoUpdateCheck : true,
   };
 
   if (s.semesterEndDate !== undefined) {
     if (!isString(s.semesterEndDate)) return { valid: false };
-    const datePart = s.semesterEndDate.split('T')[0];
-    if (!DATE_REGEX.test(datePart)) return { valid: false };
-    result.semesterEndDate = s.semesterEndDate;
+    const trimmedDate = s.semesterEndDate.trim();
+    if (trimmedDate === '') {
+      result.semesterEndDate = '';
+    } else {
+      const datePart = trimmedDate.split('T')[0];
+      if (!DATE_REGEX.test(datePart)) return { valid: false };
+      result.semesterEndDate = trimmedDate;
+    }
   }
 
   // Validate holidays

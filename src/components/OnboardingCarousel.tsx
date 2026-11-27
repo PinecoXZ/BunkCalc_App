@@ -56,11 +56,14 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, a, input, select, textarea, [role="button"]')) {
+        return;
+      }
       pointerDown.current = true;
       startX.current = e.clientX;
       startY.current = e.clientY;
       lockedAxis.current = null;
-      (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     },
     [],
   );
@@ -75,6 +78,13 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
       // Lock axis after a small threshold to distinguish scroll vs swipe
       if (lockedAxis.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
         lockedAxis.current = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+        if (lockedAxis.current === 'x') {
+          try {
+            (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+          } catch {
+            // ignore if pointer capture is unavailable
+          }
+        }
       }
 
       if (lockedAxis.current === 'x') {
@@ -199,7 +209,12 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
                   </button>
                 ) : (
                   /* Premium jumping/bouncing swipe hint */
-                  <div className="flex flex-col items-center gap-1.5 cursor-pointer animate-bounce">
+                  <button
+                    type="button"
+                    onClick={() => setActive((prev) => Math.min(slides.length - 1, prev + 1))}
+                    aria-label="Next slide"
+                    className="flex flex-col items-center gap-1.5 cursor-pointer animate-bounce bg-transparent border-0 p-1"
+                  >
                     <span className="text-[10px] font-black tracking-widest uppercase text-blue-500">
                       Swipe to continue
                     </span>
@@ -208,7 +223,7 @@ const OnboardingCarousel: React.FC<Props> = ({ onComplete }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
                     </div>
-                  </div>
+                  </button>
                 )}
               </div>
             </div>

@@ -162,9 +162,8 @@ export const MemeThemeCard: React.FC<ThemeCardProps> = ({
           style={{
             fontSize: '28px',
             fontWeight: 900,
-            background: 'linear-gradient(90deg, #f472b6 0%, #c084fc 50%, #60a5fa 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: '#e879f9',
+            textShadow: '0 0 24px rgba(96, 165, 250, 0.45)',
             fontStyle: 'italic',
             textTransform: 'uppercase',
             margin: 0,

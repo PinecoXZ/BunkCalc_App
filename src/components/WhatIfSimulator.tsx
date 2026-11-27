@@ -2,7 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
-import { calculateSubjectStats, getStatusColor } from '../lib/calculations';
+import {
+  calculateSubjectStats,
+  calculateBunkBudget,
+  calculateClassesNeededToRecover,
+  getStatusColor,
+} from '../lib/calculations';
 
 const WhatIfSimulator: React.FC = () => {
   const { subjects } = useSubjects();
@@ -14,42 +19,44 @@ const WhatIfSimulator: React.FC = () => {
   const [bunkCount, setBunkCount] = useState<number>(1);
 
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) || subjects[0];
+  const activeSubjectId = selectedSubject?.id || '';
 
   const simulation = useMemo(() => {
     if (!selectedSubject) return null;
 
-    // Current stats
     const currentStats = calculateSubjectStats(
-      selectedSubject, 
-      records, 
-      settings.semesterEndDate, 
-      settings.holidays
+      selectedSubject,
+      records,
+      settings.semesterEndDate,
+      settings.holidays,
+      settings.globalThreshold
     );
 
     const multiplier = selectedSubject.isLab ? 2 : 1;
     const threshold = selectedSubject.threshold ?? settings.globalThreshold ?? 0.75;
-    const bunkSessions = bunkCount * multiplier;
+    const maxRemainingClasses = selectedSubject.isLab
+      ? Math.floor(currentStats.remainingClasses / 2)
+      : currentStats.remainingClasses;
+    const sliderMax = maxRemainingClasses > 0 ? maxRemainingClasses : 20;
+    const effectiveBunkCount = Math.min(bunkCount, sliderMax);
+    const bunkSessions = effectiveBunkCount * multiplier;
 
     const simTotalAttended = currentStats.attendedCount;
     const simTotalMissed = currentStats.absentCount + bunkSessions;
     const simTotalClasses = simTotalAttended + simTotalMissed;
     const simRemainingClasses = Math.max(0, currentStats.remainingClasses - bunkSessions);
     const simTotalSessions = Math.max(simTotalClasses, simTotalClasses + simRemainingClasses);
-    const simRequiredSessions = Math.ceil(simTotalSessions * threshold);
-    const simSessionBudget = simTotalSessions - simRequiredSessions - simTotalMissed;
-    const simBunkBudget = multiplier > 1 ? Math.floor(simSessionBudget / multiplier) : simSessionBudget;
+    let simBunkBudget = calculateBunkBudget(simTotalSessions, simTotalMissed, threshold, multiplier);
+    if (!settings.semesterEndDate && simRemainingClasses === 0 && simBunkBudget > 0) {
+      simBunkBudget = 0;
+    }
     const simAttendancePct = simTotalClasses === 0 ? 100 : (simTotalAttended / simTotalClasses) * 100;
 
     const isBelowThreshold = simAttendancePct < (threshold * 100) || simBunkBudget < 0;
 
-    let simClassesNeededToRecover = 0;
-    if (isBelowThreshold) {
-      const denominator = multiplier * (1 - threshold);
-      if (denominator > 0) {
-        const numerator = threshold * simTotalMissed - simTotalAttended * (1 - threshold);
-        simClassesNeededToRecover = Math.max(0, Math.ceil(Number((numerator / denominator).toFixed(6))));
-      }
-    }
+    const simClassesNeededToRecover = isBelowThreshold
+      ? calculateClassesNeededToRecover(simTotalAttended, simTotalMissed, threshold, multiplier)
+      : 0;
 
     const simulatedStats = {
       ...currentStats,
@@ -66,11 +73,17 @@ const WhatIfSimulator: React.FC = () => {
     return {
       currentStats,
       simulatedStats,
-      isBelowThreshold
+      isBelowThreshold,
+      threshold,
+      sliderMax,
+      effectiveBunkCount,
     };
   }, [selectedSubject, records, settings, bunkCount]);
 
   if (subjects.length === 0) return null;
+
+  const sliderMax = simulation?.sliderMax ?? 20;
+  const effectiveBunkCount = simulation?.effectiveBunkCount ?? Math.min(bunkCount, sliderMax);
 
   return (
     <section className="mb-8">
@@ -95,11 +108,12 @@ const WhatIfSimulator: React.FC = () => {
           
           <div className="p-5 space-y-5">
             <div>
-              <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase mb-2">
+              <label htmlFor="whatif-subject-select" className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase mb-2">
                 Select Subject
               </label>
               <select 
-                value={selectedSubjectId}
+                id="whatif-subject-select"
+                value={activeSubjectId}
                 onChange={(e) => setSelectedSubjectId(e.target.value)}
                 className="neu-input w-full rounded-2xl p-3 text-sm font-bold text-slate-900 dark:text-white cursor-pointer"
               >
@@ -117,20 +131,20 @@ const WhatIfSimulator: React.FC = () => {
                   {selectedSubject.isLab ? 'Labs to Skip' : 'Classes to Skip'}
                 </label>
                 <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-purple-600 dark:text-purple-400">
-                  {bunkCount} {selectedSubject.isLab ? (bunkCount === 1 ? 'lab (2 hrs)' : 'labs') : (bunkCount === 1 ? 'class' : 'classes')}
+                  {effectiveBunkCount} {selectedSubject.isLab ? (effectiveBunkCount === 1 ? 'lab (2 hrs)' : 'labs') : (effectiveBunkCount === 1 ? 'class' : 'classes')}
                 </span>
               </div>
               <div className="neu-inset p-2 rounded-2xl">
                 <input 
                   type="range" 
                   min="1" 
-                  max="20" 
-                  value={bunkCount}
-                  onChange={(e) => setBunkCount(parseInt(e.target.value))}
+                  max={sliderMax} 
+                  value={effectiveBunkCount}
+                  onChange={(e) => setBunkCount(parseInt(e.target.value, 10))}
                   className="w-full accent-purple-600 cursor-pointer"
                   aria-valuemin={1}
-                  aria-valuemax={20}
-                  aria-valuenow={bunkCount}
+                  aria-valuemax={sliderMax}
+                  aria-valuenow={effectiveBunkCount}
                   aria-label={selectedSubject.isLab ? "Number of labs to skip" : "Number of classes to skip"}
                 />
               </div>
@@ -141,14 +155,14 @@ const WhatIfSimulator: React.FC = () => {
                 <div className="flex justify-between items-center gap-3">
                   <div className="neu-inset rounded-2xl p-3.5 text-center flex-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Current</p>
-                    <p className={`text-2xl font-black ${getStatusColor(simulation.currentStats.attendancePct)}`}>
+                    <p className={`text-2xl font-black ${getStatusColor(simulation.currentStats.attendancePct, simulation.threshold)}`}>
                       {simulation.currentStats.attendancePct.toFixed(1)}%
                     </p>
                   </div>
                   <div className="text-slate-400 font-black text-lg">→</div>
                   <div className="neu-inset rounded-2xl p-3.5 text-center flex-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">After Bunks</p>
-                    <p className={`text-2xl font-black ${getStatusColor(simulation.simulatedStats.attendancePct)}`}>
+                    <p className={`text-2xl font-black ${getStatusColor(simulation.simulatedStats.attendancePct, simulation.threshold)}`}>
                       {simulation.simulatedStats.attendancePct.toFixed(1)}%
                     </p>
                   </div>
@@ -168,7 +182,7 @@ const WhatIfSimulator: React.FC = () => {
                         Danger Zone
                       </p>
                       <p className="text-xs text-rose-700/80 dark:text-rose-300/80 font-medium">
-                        This drops you below {Math.round((selectedSubject?.threshold ?? settings.globalThreshold) * 100)}%. 
+                        This drops you below {Math.round(simulation.threshold * 100)}%. 
                         You'll need to attend <span className="font-black underline">{simulation.simulatedStats.classesNeededToRecover}</span> {selectedSubject.isLab ? (simulation.simulatedStats.classesNeededToRecover === 1 ? 'lab' : 'labs') : (simulation.simulatedStats.classesNeededToRecover === 1 ? 'class' : 'classes')} consecutively to recover.
                       </p>
                     </div>
@@ -181,7 +195,7 @@ const WhatIfSimulator: React.FC = () => {
                         Safe to Skip
                       </p>
                       <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 font-medium">
-                        You will still be above the required {Math.round((selectedSubject?.threshold ?? settings.globalThreshold) * 100)}%. 
+                        You will still be above the required {Math.round(simulation.threshold * 100)}%. 
                         Remaining budget: <span className="font-black">{simulation.simulatedStats.bunkBudget}</span> {selectedSubject.isLab ? (simulation.simulatedStats.bunkBudget === 1 ? 'lab' : 'labs') : (simulation.simulatedStats.bunkBudget === 1 ? 'bunk' : 'bunks')}.
                       </p>
                     </div>

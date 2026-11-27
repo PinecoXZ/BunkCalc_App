@@ -281,6 +281,19 @@ describe('BunkCalc Calculation Engine (TRD §3)', () => {
       // Lab multiplier 2: 4 attended, 2 missed, 80% threshold -> 2 labs needed
       expect(calculateClassesNeededToRecover(4, 2, 0.8, 2)).toBe(2);
     });
+
+    it('preserves negative bunkBudget without semesterEndDate and respects custom globalThreshold in status', () => {
+      const sub = createSubject({ attendedSoFar: 0, missedSoFar: 5, threshold: 0.75 });
+      const stats = calculateSubjectStats(sub, []);
+      expect(stats.bunkBudget).toBeLessThan(0);
+      expect(stats.classesNeededToRecover).toBe(15);
+
+      const highTarget = createSubject({ attendedSoFar: 78, missedSoFar: 22, threshold: 0.8 });
+      const overall = calculateOverallStats([highTarget], [], '', [], 0.8);
+      expect(overall.percentage).toBe(78);
+      expect(overall.isSafe).toBe(false);
+      expect(overall.status).toBe('critical');
+    });
   });
 
   describe('Attendance Streak Calculation (calculateAttendanceStreak)', () => {
@@ -352,6 +365,38 @@ describe('BunkCalc Calculation Engine (TRD §3)', () => {
       ];
 
       expect(calculateAttendanceStreak(records, [subject], holidays)).toBe(2);
+    });
+  });
+
+  describe('Global Threshold Fallback & Recovery Invariants', () => {
+    it('uses globalThreshold when subject.threshold is undefined', () => {
+      const subject = createSubject({
+        threshold: undefined as unknown as number,
+        attendedSoFar: 8,
+        missedSoFar: 2, // 80% current
+      });
+
+      const stats75 = calculateSubjectStats(subject, [], undefined, [], 0.75);
+      const stats90 = calculateSubjectStats(subject, [], undefined, [], 0.90);
+
+      expect(stats75.bunkBudget).toBeGreaterThanOrEqual(0);
+      expect(stats90.bunkBudget).toBeLessThan(0);
+      expect(stats90.classesNeededToRecover).toBeGreaterThan(0);
+    });
+
+    it('keeps classesNeededToRecover at 0 whenever bunkBudget >= 0', () => {
+      const subject = createSubject({
+        threshold: 0.75,
+        attendedSoFar: 7,
+        missedSoFar: 3, // 70% now, but remaining semester classes keep budget >= 0
+      });
+
+      const stats = calculateSubjectStats(subject, [], '2026-12-31', [], 0.75);
+      if (stats.bunkBudget >= 0) {
+        expect(stats.classesNeededToRecover).toBe(0);
+      }
+      const overall = calculateOverallStats([subject], [], '2026-12-31', [], 0.75);
+      expect(overall.classesNeededTotal).toBe(stats.bunkBudget < 0 ? stats.classesNeededToRecover : 0);
     });
   });
 });

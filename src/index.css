@@ -49,16 +49,28 @@ html.accent-purple {
   --neu-accent-glow: rgba(147, 51, 234, 0.35);
   --neu-accent-focus: rgba(168, 85, 247, 0.2);
 }
+html.accent-purple .text-blue-400,
 html.accent-purple .text-blue-500,
-html.accent-purple .text-blue-600 {
+html.accent-purple .text-blue-600,
+html.accent-purple.dark .dark\:text-blue-400 {
   color: #a855f7 !important;
 }
 html.accent-purple .bg-blue-600,
 html.accent-purple .bg-blue-500 {
   background-color: #9333ea !important;
 }
-html.accent-purple .border-blue-500 {
+html.accent-purple .bg-blue-500\/20,
+html.accent-purple .bg-blue-600\/20 {
+  background-color: rgba(147, 51, 234, 0.2) !important;
+}
+html.accent-purple .border-blue-500,
+html.accent-purple .border-blue-500\/40 {
   border-color: #a855f7 !important;
+}
+html.accent-purple .ring-blue-500,
+html.accent-purple .ring-blue-500\/50,
+html.accent-purple .ring-blue-500\/60 {
+  --tw-ring-color: rgba(168, 85, 247, 0.55) !important;
 }
 
 html.accent-emerald {
@@ -67,16 +79,28 @@ html.accent-emerald {
   --neu-accent-glow: rgba(5, 150, 105, 0.35);
   --neu-accent-focus: rgba(16, 185, 129, 0.2);
 }
+html.accent-emerald .text-blue-400,
 html.accent-emerald .text-blue-500,
-html.accent-emerald .text-blue-600 {
+html.accent-emerald .text-blue-600,
+html.accent-emerald.dark .dark\:text-blue-400 {
   color: #10b981 !important;
 }
 html.accent-emerald .bg-blue-600,
 html.accent-emerald .bg-blue-500 {
   background-color: #059669 !important;
 }
-html.accent-emerald .border-blue-500 {
+html.accent-emerald .bg-blue-500\/20,
+html.accent-emerald .bg-blue-600\/20 {
+  background-color: rgba(5, 150, 105, 0.2) !important;
+}
+html.accent-emerald .border-blue-500,
+html.accent-emerald .border-blue-500\/40 {
   border-color: #10b981 !important;
+}
+html.accent-emerald .ring-blue-500,
+html.accent-emerald .ring-blue-500\/50,
+html.accent-emerald .ring-blue-500\/60 {
+  --tw-ring-color: rgba(16, 185, 129, 0.55) !important;
 }
 
 html.accent-rose {
@@ -85,16 +109,28 @@ html.accent-rose {
   --neu-accent-glow: rgba(225, 29, 72, 0.35);
   --neu-accent-focus: rgba(244, 63, 94, 0.2);
 }
+html.accent-rose .text-blue-400,
 html.accent-rose .text-blue-500,
-html.accent-rose .text-blue-600 {
+html.accent-rose .text-blue-600,
+html.accent-rose.dark .dark\:text-blue-400 {
   color: #f43f5e !important;
 }
 html.accent-rose .bg-blue-600,
 html.accent-rose .bg-blue-500 {
   background-color: #e11d48 !important;
 }
-html.accent-rose .border-blue-500 {
+html.accent-rose .bg-blue-500\/20,
+html.accent-rose .bg-blue-600\/20 {
+  background-color: rgba(225, 29, 72, 0.2) !important;
+}
+html.accent-rose .border-blue-500,
+html.accent-rose .border-blue-500\/40 {
   border-color: #f43f5e !important;
+}
+html.accent-rose .ring-blue-500,
+html.accent-rose .ring-blue-500\/50,
+html.accent-rose .ring-blue-500\/60 {
+  --tw-ring-color: rgba(244, 63, 94, 0.55) !important;
 }
 
 html.accent-amber {
@@ -103,16 +139,28 @@ html.accent-amber {
   --neu-accent-glow: rgba(217, 119, 6, 0.35);
   --neu-accent-focus: rgba(245, 158, 11, 0.2);
 }
+html.accent-amber .text-blue-400,
 html.accent-amber .text-blue-500,
-html.accent-amber .text-blue-600 {
+html.accent-amber .text-blue-600,
+html.accent-amber.dark .dark\:text-blue-400 {
   color: #f59e0b !important;
 }
 html.accent-amber .bg-blue-600,
 html.accent-amber .bg-blue-500 {
   background-color: #d97706 !important;
 }
-html.accent-amber .border-blue-500 {
+html.accent-amber .bg-blue-500\/20,
+html.accent-amber .bg-blue-600\/20 {
+  background-color: rgba(217, 119, 6, 0.2) !important;
+}
+html.accent-amber .border-blue-500,
+html.accent-amber .border-blue-500\/40 {
   border-color: #f59e0b !important;
+}
+html.accent-amber .ring-blue-500,
+html.accent-amber .ring-blue-500\/50,
+html.accent-amber .ring-blue-500\/60 {
+  --tw-ring-color: rgba(245, 158, 11, 0.55) !important;
 }
 
 /* Base Body Styles */
@@ -357,4 +405,15 @@ body {
 
 .anim-pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

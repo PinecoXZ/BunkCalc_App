@@ -61,8 +61,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400">Master toggle for alerts & reminders</p>
           </div>
           <button 
+            role="switch"
+            aria-checked={Boolean(settings.notificationsEnabled)}
             onClick={() => setSettings({ ...settings, notificationsEnabled: !settings.notificationsEnabled })}
-            className={`w-12 h-6 rounded-full transition-all relative neu-inset ${settings.notificationsEnabled ? 'bg-blue-500/20' : ''}`}
+            className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.notificationsEnabled ? 'bg-blue-500/20' : ''}`}
             aria-label="Toggle Push Notifications"
           >
             <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.notificationsEnabled ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -93,8 +95,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 )}
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.toneMode === 'meme'}
                 onClick={() => setSettings({ ...settings, toneMode: settings.toneMode === 'meme' ? 'standard' : 'meme' })}
-                className={`w-12 h-6 rounded-full transition-all relative neu-inset flex-shrink-0 ${settings.toneMode === 'meme' ? 'bg-purple-500/20' : ''}`}
+                className={`w-12 h-6 rounded-full transition-all relative neu-inset flex-shrink-0 cursor-pointer ${settings.toneMode === 'meme' ? 'bg-purple-500/20' : ''}`}
                 aria-label="Toggle Meme Mode"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.toneMode === 'meme' ? 'left-6.5 bg-purple-600 shadow-md shadow-purple-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -119,8 +123,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   <option value={30} className="bg-slate-50 dark:bg-slate-900">30 mins</option>
                 </select>
                 <button 
+                  role="switch"
+                  aria-checked={settings.preClassReminder !== false}
                   onClick={() => setSettings({ ...settings, preClassReminder: settings.preClassReminder === false ? true : false })}
-                  className={`w-11 h-5.5 rounded-full transition-all relative neu-inset ${settings.preClassReminder !== false ? 'bg-blue-500/20' : ''}`}
+                  className={`w-11 h-5.5 rounded-full transition-all relative neu-inset cursor-pointer ${settings.preClassReminder !== false ? 'bg-blue-500/20' : ''}`}
                   aria-label="Toggle Pre-Class Reminder"
                 >
                   <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full transition-all ${settings.preClassReminder !== false ? 'left-6 bg-blue-600 shadow-sm' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -135,8 +141,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400">Prompt to mark attendance after lecture</p>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.postClassReminder !== false}
                 onClick={() => setSettings({ ...settings, postClassReminder: settings.postClassReminder === false ? true : false })}
-                className={`w-12 h-6 rounded-full transition-all relative neu-inset ${settings.postClassReminder !== false ? 'bg-blue-500/20' : ''}`}
+                className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.postClassReminder !== false ? 'bg-blue-500/20' : ''}`}
                 aria-label="Toggle Post-Class Prompts"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.postClassReminder !== false ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -150,8 +158,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400">Weekly 8 PM recap for low-budget subjects</p>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.sundaySummaryNotification !== false}
                 onClick={() => setSettings({ ...settings, sundaySummaryNotification: settings.sundaySummaryNotification === false ? true : false })}
-                className={`w-12 h-6 rounded-full transition-all relative neu-inset ${settings.sundaySummaryNotification !== false ? 'bg-blue-500/20' : ''}`}
+                className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.sundaySummaryNotification !== false ? 'bg-blue-500/20' : ''}`}
                 aria-label="Toggle Sunday Risk Summary"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.sundaySummaryNotification !== false ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -172,8 +182,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   className="neu-input rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none text-slate-900 dark:text-white"
                 />
                 <button 
+                  role="switch"
+                  aria-checked={settings.dailyScheduleDigest !== false}
                   onClick={() => setSettings({ ...settings, dailyScheduleDigest: settings.dailyScheduleDigest === false ? true : false })}
-                  className={`w-11 h-5.5 rounded-full transition-all relative neu-inset ${settings.dailyScheduleDigest !== false ? 'bg-blue-500/20' : ''}`}
+                  className={`w-11 h-5.5 rounded-full transition-all relative neu-inset cursor-pointer ${settings.dailyScheduleDigest !== false ? 'bg-blue-500/20' : ''}`}
                   aria-label="Toggle Daily Schedule Digest"
                 >
                   <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full transition-all ${settings.dailyScheduleDigest !== false ? 'left-6 bg-blue-600 shadow-sm' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -188,8 +200,10 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400">Pause all reminders during breaks</p>
               </div>
               <button 
+                role="switch"
+                aria-checked={Boolean(settings.holidayMode)}
                 onClick={() => setSettings({ ...settings, holidayMode: !settings.holidayMode })}
-                className={`w-12 h-6 rounded-full transition-all relative neu-inset ${settings.holidayMode ? 'bg-amber-500/20' : ''}`}
+                className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.holidayMode ? 'bg-amber-500/20' : ''}`}
                 aria-label="Toggle Holiday Mode"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.holidayMode ? 'left-6.5 bg-amber-500 shadow-md shadow-amber-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>

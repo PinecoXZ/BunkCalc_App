@@ -2,8 +2,16 @@ import type { Subject, AppSettings } from './types';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { suppressAppLockTemporarily } from './appLockBridge';
 
 const DAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+const escapeICSText = (val: string): string =>
+  val
+    .replace(/\\/g, '\\\\')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,');
 
 const formatICSDate = (date: Date): string => {
   const y = date.getUTCFullYear();
@@ -42,8 +50,10 @@ const generateTimetableICS = (
   subjects.forEach((subject) => {
     (subject.schedule || []).forEach((slot, slotIdx) => {
       const [hourStr, minStr] = slot.slot.split(':');
-      const startHour = parseInt(hourStr, 10) || 9;
-      const startMin = parseInt(minStr, 10) || 0;
+      const parsedHour = parseInt(hourStr, 10);
+      const parsedMin = parseInt(minStr, 10);
+      const startHour = Number.isFinite(parsedHour) && parsedHour >= 0 && parsedHour <= 23 ? parsedHour : 9;
+      const startMin = Number.isFinite(parsedMin) && parsedMin >= 0 && parsedMin <= 59 ? parsedMin : 0;
       const durationHours = subject.isLab ? 2 : 1;
       const endHour = startHour + durationHours;
 
@@ -69,19 +79,19 @@ const generateTimetableICS = (
       lines.push(`DTSTART:${formatICSDate(firstEventDate)}`);
       lines.push(`DTEND:${formatICSDate(firstEndDate)}`);
       lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${byDay};UNTIL=${untilDateStr}`);
-      lines.push(`SUMMARY:${subject.name}${subject.isLab ? ' (Lab)' : ''}`);
+      lines.push(`SUMMARY:${escapeICSText(subject.name)}${subject.isLab ? ' (Lab)' : ''}`);
       
       const descParts = [
-        `Subject: ${subject.name}`,
+        `Subject: ${escapeICSText(subject.name)}`,
         `Credits: ${subject.credits}`,
         subject.isLab ? 'Type: Practical Lab (2 Hours)' : 'Type: Lecture',
       ];
-      if (faculty) descParts.push(`Faculty: ${faculty}`);
-      if (room) descParts.push(`Room: ${room}`);
+      if (faculty) descParts.push(`Faculty: ${escapeICSText(faculty)}`);
+      if (room) descParts.push(`Room: ${escapeICSText(room)}`);
       lines.push(`DESCRIPTION:${descParts.join('\\n')}`);
 
       if (room) {
-        lines.push(`LOCATION:${room}`);
+        lines.push(`LOCATION:${escapeICSText(room)}`);
       }
 
       // Add holiday exemption dates if configured
@@ -133,6 +143,7 @@ export const exportTimetableToICS = async (
         directory: Directory.Cache,
       });
 
+      suppressAppLockTemporarily();
       await Share.share({
         title: 'BunkCalc Class Timetable',
         text: 'Import your class schedule into Google Calendar or Apple Calendar.',

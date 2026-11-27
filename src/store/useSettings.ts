@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AppSettings, ArchivedSemester, Holiday } from '../lib/types';
 import { saveToStorage, getFromStorage } from '../lib/storage';
+import { hashPin, isHashedPin } from '../lib/pinUtils';
 import { syncNotificationsAndWidgets } from './syncHelpers';
 import { useSubjects } from './useSubjects';
 import { useAttendance } from './useAttendance';
@@ -8,10 +9,13 @@ import { useAttendance } from './useAttendance';
 interface SettingsState {
   settings: AppSettings;
   archivedSemesters: ArchivedSemester[];
-  setSettings: (settings: AppSettings) => void;
-  addHoliday: (holiday: Holiday) => void;
-  updateHoliday: (holiday: Holiday) => void;
-  deleteHoliday: (id: string) => void;
+  storageError: string | null;
+  clearStorageError: () => void;
+  setSettings: (settings: AppSettings) => Promise<void>;
+  addHoliday: (holiday: Holiday) => Promise<void>;
+  addMultipleHolidays: (holidays: Holiday[]) => Promise<void>;
+  updateHoliday: (holiday: Holiday) => Promise<void>;
+  deleteHoliday: (id: string) => Promise<void>;
   loadSettings: () => Promise<void>;
   loadArchivedSemesters: () => Promise<void>;
   archiveSemester: (semester: ArchivedSemester) => Promise<void>;
@@ -34,18 +38,24 @@ const defaultSettings: AppSettings = {
   theme: 'dark',
   themeAccent: 'blue',
   toneMode: 'standard',
+  autoUpdateCheck: true,
   holidays: [],
 };
 
 export const useSettings = create<SettingsState>((set, get) => ({
   settings: defaultSettings,
   archivedSemesters: [],
+  storageError: null,
+  clearStorageError: () => set({ storageError: null }),
   setSettings: async (settings) => {
-    set({ settings });
+    const previous = get().settings;
+    set({ settings, storageError: null });
     try {
       await saveToStorage('app_settings', settings);
     } catch (err) {
       console.error('Failed to persist app_settings:', err);
+      set({ settings: previous, storageError: 'Failed to save settings to device storage.' });
+      return;
     }
     applyTheme(settings.theme, settings.themeAccent);
 
@@ -62,17 +72,42 @@ export const useSettings = create<SettingsState>((set, get) => ({
       ...currentSettings,
       holidays: [...currentHolidays, holiday],
     };
-    set({ settings: updatedSettings });
+    set({ settings: updatedSettings, storageError: null });
     try {
       await saveToStorage('app_settings', updatedSettings);
     } catch (err) {
       console.error('Failed to persist app_settings:', err);
+      set({ settings: currentSettings, storageError: 'Failed to save holiday to device storage.' });
+      return;
     }
 
     try {
       await syncNotificationsAndWidgets(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
     } catch (err) {
       console.warn('Failed to sync reminders on holiday add:', err);
+    }
+  },
+  addMultipleHolidays: async (holidaysToAdd) => {
+    if (holidaysToAdd.length === 0) return;
+    const currentSettings = get().settings;
+    const currentHolidays = currentSettings.holidays || [];
+    const updatedSettings: AppSettings = {
+      ...currentSettings,
+      holidays: [...currentHolidays, ...holidaysToAdd],
+    };
+    set({ settings: updatedSettings, storageError: null });
+    try {
+      await saveToStorage('app_settings', updatedSettings);
+    } catch (err) {
+      console.error('Failed to persist app_settings:', err);
+      set({ settings: currentSettings, storageError: 'Failed to save holidays to device storage.' });
+      return;
+    }
+
+    try {
+      await syncNotificationsAndWidgets(useSubjects.getState().subjects, updatedSettings, useAttendance.getState().records);
+    } catch (err) {
+      console.warn('Failed to sync reminders on bulk holiday add:', err);
     }
   },
   updateHoliday: async (holiday) => {
@@ -82,11 +117,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
       ...currentSettings,
       holidays: currentHolidays.map((h) => (h.id === holiday.id ? holiday : h)),
     };
-    set({ settings: updatedSettings });
+    set({ settings: updatedSettings, storageError: null });
     try {
       await saveToStorage('app_settings', updatedSettings);
     } catch (err) {
       console.error('Failed to persist app_settings:', err);
+      set({ settings: currentSettings, storageError: 'Failed to update holiday in device storage.' });
+      return;
     }
 
     try {
@@ -102,11 +139,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
       ...currentSettings,
       holidays: currentHolidays.filter((h) => h.id !== id),
     };
-    set({ settings: updatedSettings });
+    set({ settings: updatedSettings, storageError: null });
     try {
       await saveToStorage('app_settings', updatedSettings);
     } catch (err) {
       console.error('Failed to persist app_settings:', err);
+      set({ settings: currentSettings, storageError: 'Failed to delete holiday from device storage.' });
+      return;
     }
 
     try {
@@ -118,7 +157,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
   loadSettings: async () => {
     const stored = await getFromStorage<AppSettings>('app_settings');
     if (stored) {
-      const merged = { ...defaultSettings, ...stored, holidays: stored.holidays || [] };
+      let merged: AppSettings = { ...defaultSettings, ...stored, holidays: stored.holidays || [] };
+      if (merged.appLockPin && !isHashedPin(merged.appLockPin)) {
+        const hashed = await hashPin(merged.appLockPin);
+        merged = { ...merged, appLockPin: hashed };
+        try {
+          await saveToStorage('app_settings', merged);
+        } catch (err) {
+          console.warn('Failed to migrate legacy PIN hash:', err);
+        }
+      }
       set({ settings: merged });
       applyTheme(merged.theme, merged.themeAccent);
     } else {
@@ -132,28 +180,33 @@ export const useSettings = create<SettingsState>((set, get) => ({
   archiveSemester: async (semester) => {
     const current = get().archivedSemesters;
     const updated = [...current, semester];
-    set({ archivedSemesters: updated });
+    set({ archivedSemesters: updated, storageError: null });
     try {
       await saveToStorage('archived_semesters', updated);
     } catch (err) {
       console.error('Failed to persist archived_semesters:', err);
+      set({ archivedSemesters: current, storageError: 'Failed to archive semester to device storage.' });
+      throw err;
     }
   },
   deleteArchivedSemester: async (id) => {
     const current = get().archivedSemesters;
     const updated = current.filter(s => s.id !== id);
-    set({ archivedSemesters: updated });
+    set({ archivedSemesters: updated, storageError: null });
     try {
       await saveToStorage('archived_semesters', updated);
     } catch (err) {
       console.error('Failed to persist archived_semesters:', err);
+      set({ archivedSemesters: current, storageError: 'Failed to delete archived semester.' });
     }
   },
 }));
 
 let systemThemeMediaListener: ((e: MediaQueryListEvent) => void) | null = null;
 
-function applyTheme(theme: 'light' | 'dark' | 'system', accent: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' = 'blue') {
+const DARK_THEMES = new Set<string>(['dark', 'oled', 'dracula', 'cyberpunk', 'nord', 'forest']);
+
+function applyTheme(theme: AppSettings['theme'] | string, accent: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' = 'blue') {
   const root = window.document.documentElement;
   
   // Clean up previous system theme listener if any
@@ -175,7 +228,7 @@ function applyTheme(theme: 'light' | 'dark' | 'system', accent: 'blue' | 'purple
     systemThemeMediaListener = listener;
   }
 
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = DARK_THEMES.has(theme) || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   
   if (isDark) {
     root.classList.add('dark');

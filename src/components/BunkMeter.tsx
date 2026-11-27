@@ -10,6 +10,8 @@ interface BunkMeterProps {
   strokeWidth?: number;
   label?: string;
   showDetails?: boolean;
+  isSemesterEnded?: boolean;
+  thresholdPct?: number;
 }
 
 export const BunkMeter: React.FC<BunkMeterProps> = ({
@@ -21,7 +23,9 @@ export const BunkMeter: React.FC<BunkMeterProps> = ({
   size = 180,
   strokeWidth = 14,
   label = "Overall Health",
-  showDetails = true
+  showDetails = true,
+  isSemesterEnded = false,
+  thresholdPct = 75
 }) => {
   const [animatedPct, setAnimatedPct] = useState(0);
 
@@ -109,23 +113,47 @@ export const BunkMeter: React.FC<BunkMeterProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-3 w-full mt-1">
-            <div className="neu-inset p-3.5 rounded-2xl text-center">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Safe Bunk Pool
-              </span>
-              <span className={`text-xl font-black ${safeBunksTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {safeBunksTotal >= 0 ? `+${safeBunksTotal}` : safeBunksTotal}
-              </span>
-            </div>
+            {isSemesterEnded ? (
+              <>
+                <div className="neu-inset p-3.5 rounded-2xl text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Classes Logged
+                  </span>
+                  <span className="text-xl font-black text-blue-500 tabular-nums">
+                    {totalAttended}/{totalClasses}
+                  </span>
+                </div>
 
-            <div className="neu-inset p-3.5 rounded-2xl text-center">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {classesNeededTotal > 0 ? 'Must Attend' : 'Classes Logged'}
-              </span>
-              <span className={`text-xl font-black ${classesNeededTotal > 0 ? 'text-amber-500' : 'text-blue-500'}`}>
-                {classesNeededTotal > 0 ? `${classesNeededTotal} req` : `${totalAttended}/${totalClasses}`}
-              </span>
-            </div>
+                <div className="neu-inset p-3.5 rounded-2xl text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {thresholdPct}% Target
+                  </span>
+                  <span className={`text-xl font-black ${percentage >= thresholdPct ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {percentage >= thresholdPct ? 'Met' : 'Short'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="neu-inset p-3.5 rounded-2xl text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Safe Bunk Pool
+                  </span>
+                  <span className={`text-xl font-black ${safeBunksTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {safeBunksTotal >= 0 ? `+${safeBunksTotal}` : safeBunksTotal}
+                  </span>
+                </div>
+
+                <div className="neu-inset p-3.5 rounded-2xl text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {classesNeededTotal > 0 ? 'Must Attend' : 'Classes Logged'}
+                  </span>
+                  <span className={`text-xl font-black ${classesNeededTotal > 0 ? 'text-amber-500' : 'text-blue-500'}`}>
+                    {classesNeededTotal > 0 ? `${classesNeededTotal} req` : `${totalAttended}/${totalClasses}`}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

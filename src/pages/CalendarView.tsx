@@ -3,7 +3,8 @@ import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
 import { v4 as uuidv4 } from 'uuid';
-import { toISODateStr } from '../lib/dateUtils';
+import { isSemesterEnded, toISODateStr } from '../lib/dateUtils';
+import { useCurrentDate } from '../lib/useCurrentDate';
 
 interface Props {
   onBack: () => void;
@@ -24,7 +25,7 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = new Date(year, month, 1).getDay();
 
-  const todayStr = React.useMemo(() => toISODateStr(new Date()), []);
+  const { todayStr } = useCurrentDate();
 
   const selectedDateStr = React.useMemo(() => selectedDate ? toISODateStr(selectedDate) : null, [selectedDate]);
 
@@ -46,15 +47,37 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
     return (settings.holidays || []).find(h => dateStr >= h.startDate && dateStr <= h.endDate);
   };
 
-  // Helper to get scheduled subjects for a date
-  const getSubjectsForDate = (date: Date) => {
+  // Helper to get scheduled subject slots for a date
+  const getScheduledEntriesForDate = (date: Date) => {
     const dayOfWeek = date.getDay();
-    return subjects.filter(sub => sub.schedule.some(slot => Number(slot.day) === dayOfWeek));
+    const entries: { subject: (typeof subjects)[number]; slot: string; slotIndex: number; totalSlotsOnDay: number }[] = [];
+    for (const sub of subjects) {
+      const daySlots = sub.schedule.filter((slot) => Number(slot.day) === dayOfWeek);
+      daySlots.forEach((slotInfo, slotIndex) => {
+        entries.push({
+          subject: sub,
+          slot: slotInfo.slot,
+          slotIndex,
+          totalSlotsOnDay: daySlots.length,
+        });
+      });
+    }
+    return entries;
   };
 
-  // Helper to get attendance status for a subject on a date
-  const getStatus = (subjectId: string, dateStr: string) => {
-    const record = records.find(r => r.subjectId === subjectId && r.date === dateStr);
+  // Helper to get attendance record for a subject slot on a date (with legacy !r.slot fallback on first slot)
+  const getRecordForSlot = (subjectId: string, dateStr: string, slot: string, slotIndex: number) => {
+    return (
+      records.find((r) => r.subjectId === subjectId && r.date === dateStr && r.slot === slot) ||
+      (slotIndex === 0
+        ? records.find((r) => r.subjectId === subjectId && r.date === dateStr && !r.slot)
+        : undefined)
+    );
+  };
+
+  // Helper to get attendance status for a subject slot on a date
+  const getSlotStatus = (subjectId: string, dateStr: string, slot: string, slotIndex: number) => {
+    const record = getRecordForSlot(subjectId, dateStr, slot, slotIndex);
     return record ? record.status : 'unmarked';
   };
 
@@ -85,9 +108,10 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
       const isToday = dateStr === todayStr;
       const isSelected = selectedDateStr === dateStr;
       const holiday = getHolidayForDate(dateStr);
+      const isPostSemester = isSemesterEnded(settings.semesterEndDate, dateStr);
 
-      const scheduledSubjects = getSubjectsForDate(date);
-      const dots = scheduledSubjects.map(sub => getStatus(sub.id, dateStr));
+      const scheduledEntries = getScheduledEntriesForDate(date);
+      const dots = scheduledEntries.map((entry) => getSlotStatus(entry.subject.id, dateStr, entry.slot, entry.slotIndex));
       const hasMarkedRecords = dots.some(s => s !== 'unmarked');
 
       cells.push(
@@ -129,7 +153,7 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
           {!isFuture && !hasMarkedRecords && holiday && (
             <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1" />
           )}
-          {!isFuture && !hasMarkedRecords && !holiday && dots.length > 0 && (
+          {!isFuture && !hasMarkedRecords && !holiday && !isPostSemester && dots.length > 0 && (
             <div className="flex gap-0.5 mt-1">
               {dots.map((_, idx) => (
                 <div
@@ -146,8 +170,9 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
     return cells;
   };
 
-  const selectedSubjects = selectedDate ? getSubjectsForDate(selectedDate) : [];
+  const selectedEntries = selectedDate ? getScheduledEntriesForDate(selectedDate) : [];
   const selectedHoliday = selectedDateStr ? getHolidayForDate(selectedDateStr) : null;
+  const selectedIsPostSemester = selectedDateStr ? isSemesterEnded(settings.semesterEndDate, selectedDateStr) : false;
   const recordsForSelectedDate = selectedDateStr ? records.filter(r => r.date === selectedDateStr) : [];
 
   return (
@@ -216,16 +241,31 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
           {selectedHoliday && recordsForSelectedDate.length === 0 && !showHolidayTimetable ? (
             <div className="text-center p-8 neu-inset rounded-3xl">
               <p className="text-slate-500 dark:text-slate-400 font-medium text-xs">No classes scheduled on this holiday.</p>
-              {selectedSubjects.length > 0 && (
+              {selectedEntries.length > 0 && (
                 <button 
                   onClick={() => setShowHolidayTimetable(true)}
                   className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer"
                 >
-                  Had a special makeup class? View schedule ({selectedSubjects.length} slots)
+                  Had a special makeup class? View schedule ({selectedEntries.length} slots)
                 </button>
               )}
             </div>
-          ) : selectedSubjects.length === 0 ? (
+          ) : selectedIsPostSemester && recordsForSelectedDate.length === 0 && !showHolidayTimetable ? (
+            <div className="text-center p-8 neu-inset rounded-3xl">
+              <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">Semester Ended</p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-1">
+                No regular classes scheduled after {settings.semesterEndDate.split('T')[0]}.
+              </p>
+              {selectedEntries.length > 0 && (
+                <button 
+                  onClick={() => setShowHolidayTimetable(true)}
+                  className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer"
+                >
+                  Had a special makeup class? View schedule ({selectedEntries.length} slots)
+                </button>
+              )}
+            </div>
+          ) : selectedEntries.length === 0 ? (
             <div className="text-center p-8 neu-inset rounded-3xl">
               <p className="text-slate-500 dark:text-slate-400 font-medium text-xs">No classes scheduled for this day.</p>
             </div>
@@ -242,15 +282,22 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
                   </button>
                 </div>
               )}
-              {selectedSubjects.map(subject => {
+              {selectedEntries.map(({ subject, slot, slotIndex, totalSlotsOnDay }) => {
                 if (!selectedDateStr) return null;
-                const record = records.find(r => r.subjectId === subject.id && r.date === selectedDateStr);
+                const record = getRecordForSlot(subject.id, selectedDateStr, slot, slotIndex);
                 const status = record ? record.status : 'unmarked';
 
                 return (
-                  <div key={subject.id} className="neu-card p-5 rounded-3xl flex flex-col gap-3.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-slate-900 dark:text-white">{subject.name}</span>
+                  <div key={`${subject.id}_${slot}_${slotIndex}`} className="neu-card p-5 rounded-3xl flex flex-col gap-3.5">
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 dark:text-white block truncate">{subject.name}</span>
+                        {(totalSlotsOnDay > 1 || slot) && (
+                          <span className="text-[11px] font-bold text-blue-500 dark:text-blue-400">
+                            {slot}
+                          </span>
+                        )}
+                      </div>
                       {status !== 'unmarked' && (
                         <span className={`neu-flat-sm px-2.5 py-1 rounded-xl text-xs font-black uppercase ${
                           status === 'present' ? 'text-emerald-600 dark:text-emerald-400' :
@@ -266,8 +313,8 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
                       <div className="grid grid-cols-3 gap-2.5">
                         <button
                           onClick={() => {
-                            if (!records.find(r => r.subjectId === subject.id && r.date === selectedDateStr)) {
-                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, status: 'present' });
+                            if (!getRecordForSlot(subject.id, selectedDateStr, slot, slotIndex)) {
+                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, slot, status: 'present' });
                             }
                           }}
                           className="neu-btn-present py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1"
@@ -277,8 +324,8 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
                         </button>
                         <button
                           onClick={() => {
-                            if (!records.find(r => r.subjectId === subject.id && r.date === selectedDateStr)) {
-                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, status: 'absent' });
+                            if (!getRecordForSlot(subject.id, selectedDateStr, slot, slotIndex)) {
+                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, slot, status: 'absent' });
                             }
                           }}
                           className="neu-btn-absent py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1"
@@ -288,8 +335,8 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
                         </button>
                         <button
                           onClick={() => {
-                            if (!records.find(r => r.subjectId === subject.id && r.date === selectedDateStr)) {
-                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, status: 'cancelled' });
+                            if (!getRecordForSlot(subject.id, selectedDateStr, slot, slotIndex)) {
+                              markAttendance({ id: uuidv4(), subjectId: subject.id, date: selectedDateStr, slot, status: 'cancelled' });
                             }
                           }}
                           className="neu-btn py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300"
@@ -306,6 +353,7 @@ const CalendarView: React.FC<Props> = ({ onBack }) => {
                               if (record) {
                                 await markAttendance({
                                   ...record,
+                                  slot: record.slot ?? slot,
                                   status: status === 'present' ? 'absent' : 'present'
                                 });
                               }

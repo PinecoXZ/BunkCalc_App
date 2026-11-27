@@ -91,6 +91,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400">Tactile vibrations on interaction</p>
           </div>
           <button 
+            role="switch"
+            aria-checked={Boolean(settings.hapticsEnabled)}
+            aria-label="Toggle Haptic Feedback"
             onClick={() => setSettings({ ...settings, hapticsEnabled: !settings.hapticsEnabled })}
             className={`w-13 h-7 rounded-full transition-all relative cursor-pointer p-0.5 ${
               settings.hapticsEnabled 

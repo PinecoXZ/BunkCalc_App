@@ -3,6 +3,7 @@ import SubHeader from './SubHeader';
 import ThemedIcon from '../ThemedIcon';
 import { APP_VERSION_NAME } from '../../lib/constants';
 import { useUpdateStore } from '../../store/useUpdateStore';
+import { useSettings } from '../../store/useSettings';
 
 interface AboutSettingsProps {
   onBack: () => void;
@@ -20,6 +21,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
   onOpenLegal,
 }) => {
   const { checkForUpdates, isChecking, isUpdateAvailable, latestVersion } = useUpdateStore();
+  const { settings, setSettings } = useSettings();
   const [checkStatusMessage, setCheckStatusMessage] = useState<string | null>(null);
 
   const handleManualCheck = async () => {
@@ -111,6 +113,25 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({
             {isChecking ? 'Checking...' : isUpdateAvailable ? 'Update' : 'Check'}
           </span>
         </button>
+
+        {/* Auto Update Checks Toggle */}
+        <div className="p-4.5 flex justify-between items-center">
+          <div>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Automatic Update Checks</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Disable for 100% zero-network launch mode
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={settings.autoUpdateCheck !== false}
+            onClick={() => setSettings({ ...settings, autoUpdateCheck: settings.autoUpdateCheck === false })}
+            className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.autoUpdateCheck !== false ? 'bg-blue-500/20' : ''}`}
+            aria-label="Toggle Automatic Update Checks"
+          >
+            <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.autoUpdateCheck !== false ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
+          </button>
+        </div>
 
         <a 
           href="https://github.com/PinecoXZ/BunkCalc_App"

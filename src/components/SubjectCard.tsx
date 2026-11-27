@@ -2,29 +2,31 @@ import React, { useMemo } from 'react';
 import type { Subject } from '../lib/types';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
-import { calculateSubjectStats } from '../lib/calculations';
+import { calculateSubjectStats, type SubjectStats } from '../lib/calculations';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface Props {
   subject: Subject;
+  stats?: SubjectStats;
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
   index?: number;
 }
 
-const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete, index = 0 }) => {
+const SubjectCard: React.FC<Props> = ({ subject, stats: precomputedStats, onClick, onEdit, onDelete, index = 0 }) => {
   const { records } = useAttendance();
   const { settings } = useSettings();
   const [showMenu, setShowMenu] = React.useState(false);
   const stats = useMemo(
-    () => calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays),
-    [subject, records, settings.semesterEndDate, settings.holidays]
+    () => precomputedStats ?? calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold),
+    [precomputedStats, subject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]
   );
 
+  const thresholdPct = (subject.threshold ?? settings.globalThreshold) * 100;
   const isRecoveryMode = stats.bunkBudget < 0;
-  const isSafe = stats.attendancePct >= (subject.threshold * 100);
-  const isWarning = !isRecoveryMode && stats.bunkBudget <= 3 && stats.bunkBudget >= 0;
+  const isSafe = stats.attendancePct >= thresholdPct;
+  const isWarning = !isRecoveryMode && (stats.bunkBudget <= 3 || stats.attendancePct < thresholdPct);
 
   // Status stripe class
   const stripeClass = isRecoveryMode ? 'card-stripe-danger' : isWarning ? 'card-stripe-warning' : 'card-stripe-safe';
@@ -72,8 +74,16 @@ const SubjectCard: React.FC<Props> = ({ subject, onClick, onEdit, onDelete, inde
 
   return (
     <div 
+      role="button"
+      tabIndex={0}
       onClick={handleCardClick}
-      className={`neu-card rounded-3xl p-5 active:scale-[0.985] transition-all duration-200 cursor-pointer relative overflow-hidden anim-stagger-in ${stripeClass} ${
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className={`neu-card rounded-3xl p-5 active:scale-[0.985] transition-all duration-200 cursor-pointer relative anim-stagger-in ${stripeClass} ${
         isRecoveryMode 
           ? 'border-rose-500/30' 
           : ''

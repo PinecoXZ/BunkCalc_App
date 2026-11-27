@@ -22,11 +22,12 @@ export const calculateSubjectStats = (
   subject: Subject,
   records: AttendanceRecord[],
   semesterEndDate?: string,
-  holidays?: Holiday[]
+  holidays?: Holiday[],
+  globalThreshold?: number
 ): SubjectStats => {
   const subjectRecords = records.filter((r) => r.subjectId === subject.id);
   const multiplier = subject.isLab ? 2 : 1;
-  const threshold = subject.threshold ?? 0.75;
+  const threshold = subject.threshold ?? globalThreshold ?? 0.75;
 
   // Past history is stored in session units per TRD §2 & §3
   const attendedSoFar = subject.attendedSoFar || 0;
@@ -60,16 +61,16 @@ export const calculateSubjectStats = (
   // Math.floor(sessionBudget / multiplier) gives the exact number of classes a student can safely skip.
   let bunkBudget = calculateBunkBudget(totalSessions, totalMissed, threshold, multiplier);
 
-  if (!semesterEndDate && remainingClasses === 0) {
+  if (!semesterEndDate && remainingClasses === 0 && bunkBudget > 0) {
     bunkBudget = 0;
   }
 
   // Current attendance %
   const attendancePct = totalClasses === 0 ? 100 : (totalAttended / totalClasses) * 100;
 
-  // Classes needed to recover if below threshold or negative budget.
+  // Classes needed to recover if bunk budget is negative (semester-forward deficit per TRD §3).
   let classesNeededToRecover = 0;
-  if (bunkBudget < 0 || attendancePct < threshold * 100) {
+  if (bunkBudget < 0) {
     classesNeededToRecover = calculateClassesNeededToRecover(totalAttended, totalMissed, threshold, multiplier);
   }
 
@@ -145,7 +146,7 @@ export const calculateOverallStats = (
   let classesNeeded = 0;
 
   subjects.forEach((s) => {
-    const stats = calculateSubjectStats(s, records, semesterEndDate, holidays);
+    const stats = calculateSubjectStats(s, records, semesterEndDate, holidays, globalThreshold);
     attended += stats.attendedCount;
     total += stats.totalClasses;
     bunks += Math.max(0, stats.bunkBudget);
@@ -155,8 +156,9 @@ export const calculateOverallStats = (
   });
 
   const percentage = total === 0 ? 100 : Math.round((attended / total) * 100);
-  const isSafe = percentage >= (globalThreshold * 100);
-  const status: 'safe' | 'warning' | 'critical' = percentage >= 85 ? 'safe' : percentage >= 75 ? 'warning' : 'critical';
+  const thresholdPct = globalThreshold * 100;
+  const isSafe = percentage >= thresholdPct;
+  const status: 'safe' | 'warning' | 'critical' = percentage >= thresholdPct + 10 ? 'safe' : percentage >= thresholdPct ? 'warning' : 'critical';
 
   return {
     percentage,
@@ -245,8 +247,8 @@ export const calculateAttendanceStreak = (
 ): number => {
   if (subjects.length === 0 || records.length === 0) return 0;
 
-  // Index records by date -> subjectId -> status for O(1) lookups
-  const recordsByDate = new Map<string, Map<string, AttendanceRecord['status']>>();
+  // Index records by date -> subjectId -> list of records for multi-slot awareness
+  const recordsByDate = new Map<string, Map<string, AttendanceRecord[]>>();
   for (let i = 0; i < records.length; i++) {
     const r = records[i];
     let dayMap = recordsByDate.get(r.date);
@@ -254,7 +256,12 @@ export const calculateAttendanceStreak = (
       dayMap = new Map();
       recordsByDate.set(r.date, dayMap);
     }
-    dayMap.set(r.subjectId, r.status);
+    const existing = dayMap.get(r.subjectId);
+    if (existing) {
+      existing.push(r);
+    } else {
+      dayMap.set(r.subjectId, [r]);
+    }
   }
 
   const now = new Date();
@@ -291,14 +298,29 @@ export const calculateAttendanceStreak = (
     let unmarkedCount = 0;
 
     for (const sub of scheduledSubjects) {
-      const status = dayMap.get(sub.id);
-      if (!status) {
+      const subRecords = dayMap.get(sub.id);
+      if (!subRecords || subRecords.length === 0) {
         unmarkedCount++;
-      } else if (status === 'absent') {
+        continue;
+      }
+
+      if (subRecords.some((r) => r.status === 'absent')) {
         hasAbsent = true;
         break;
-      } else if (status === 'present') {
+      }
+
+      if (subRecords.some((r) => r.status === 'present')) {
         hasPresent = true;
+      }
+
+      const hasLegacyRecord = subRecords.some((r) => !r.slot);
+      if (!hasLegacyRecord) {
+        const scheduledSlots = sub.schedule.filter((slot) => Number(slot.day) === dayOfWeek);
+        const markedSlots = new Set(subRecords.map((r) => r.slot).filter(Boolean));
+        const missingSlots = scheduledSlots.filter((slot) => !markedSlots.has(slot.slot)).length;
+        if (missingSlots > 0 && subRecords.length < scheduledSlots.length) {
+          unmarkedCount += missingSlots;
+        }
       }
     }
 

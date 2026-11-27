@@ -7,7 +7,7 @@ interface SecuritySettingsProps {
   settings: AppSettings;
   setSettings: (settings: AppSettings) => void;
   onBack: () => void;
-  onOpenPinModal: (mode: 'set' | 'change') => void;
+  onOpenPinModal: (mode: 'set' | 'change' | 'disable') => void;
   onShowModal: (modal: {
     isOpen: boolean;
     title: string;
@@ -41,6 +41,8 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400">Lock BunkCalc with a 4-digit passcode on launch</p>
           </div>
           <button 
+            role="switch"
+            aria-checked={Boolean(settings.appLockEnabled)}
             onClick={() => {
               if (!settings.appLockEnabled) {
                 if (!settings.appLockPin) {
@@ -48,11 +50,13 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = ({
                 } else {
                   setSettings({ ...settings, appLockEnabled: true });
                 }
+              } else if (settings.appLockPin) {
+                onOpenPinModal('disable');
               } else {
                 setSettings({ ...settings, appLockEnabled: false });
               }
             }}
-            className={`w-12 h-6 rounded-full transition-all relative neu-inset ${settings.appLockEnabled ? 'bg-blue-500/20' : ''}`}
+            className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${settings.appLockEnabled ? 'bg-blue-500/20' : ''}`}
             aria-label="Toggle App PIN Lock"
           >
             <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${settings.appLockEnabled ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>
@@ -85,6 +89,8 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = ({
                 </div>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.biometricsEnabled ?? true}
                 onClick={async () => {
                   const willEnable = !(settings.biometricsEnabled ?? true);
                   if (willEnable) {
@@ -103,7 +109,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = ({
                   }
                   setSettings({ ...settings, biometricsEnabled: willEnable });
                 }}
-                className={`w-12 h-6 rounded-full transition-all relative neu-inset ${(settings.biometricsEnabled ?? true) ? 'bg-blue-500/20' : ''}`}
+                className={`w-12 h-6 rounded-full transition-all relative neu-inset cursor-pointer ${(settings.biometricsEnabled ?? true) ? 'bg-blue-500/20' : ''}`}
                 aria-label="Toggle Fingerprint Unlock"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${(settings.biometricsEnabled ?? true) ? 'left-6.5 bg-blue-600 shadow-md shadow-blue-500/50' : 'left-0.5 bg-slate-400 dark:bg-slate-600'}`}></div>

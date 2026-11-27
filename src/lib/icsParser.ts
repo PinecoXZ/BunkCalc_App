@@ -1,13 +1,23 @@
 import type { Holiday } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { toISODateStr } from './dateUtils';
+import { sanitizeName } from './validation';
+
+const unescapeICSText = (text: string): string =>
+  text
+    .replace(/\\n/gi, ' ')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
 
 /**
  * Parses an RFC 5545 .ics file text and extracts holiday event date ranges
  */
 export const parseICSFile = (icsText: string): Holiday[] => {
   const holidays: Holiday[] = [];
-  const lines = icsText.split(/\r\n|\n|\r/);
+  // RFC 5545 line unfolding: CRLF or LF followed by single space/tab continues previous line
+  const unfolded = icsText.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+  const lines = unfolded.split(/\r\n|\n|\r/);
   
   let inEvent = false;
   let summary = '';
@@ -36,17 +46,21 @@ export const parseICSFile = (icsText: string): Holiday[] => {
       if (inEvent && dtStart) {
         const start = parseDate(dtStart);
         let end = dtEnd ? parseDate(dtEnd) : start;
+        const dtEndValue = dtEnd.includes(':') ? dtEnd.split(':').pop() || '' : dtEnd;
+        const hasTimeComponent = /T\d{4,6}/i.test(dtEndValue);
         // RFC 5545: DTEND for all-day events (VALUE=DATE) is exclusive
         // If end date differs from start and dtEnd has no time component, subtract 1 day
-        if (end && dtEnd && !dtEnd.includes('T') && end !== start) {
-          const endDate = new Date(end);
+        if (end && dtEnd && !hasTimeComponent && end !== start) {
+          const [ey, em, ed] = end.split('-').map(Number);
+          const endDate = new Date(ey, em - 1, ed);
           endDate.setDate(endDate.getDate() - 1);
           end = toISODateStr(endDate);
         }
         if (start) {
+          const cleanName = sanitizeName(unescapeICSText(summary));
           holidays.push({
             id: uuidv4(),
-            name: summary || 'Academic Holiday',
+            name: cleanName || 'Academic Holiday',
             startDate: start,
             endDate: end || start,
           });
@@ -54,8 +68,9 @@ export const parseICSFile = (icsText: string): Holiday[] => {
       }
       inEvent = false;
     } else if (inEvent) {
-      if (trimmed.startsWith('SUMMARY:')) {
-        summary = trimmed.slice(8);
+      const summaryMatch = trimmed.match(/^SUMMARY(?:;[^:]*)?:(.*)$/i);
+      if (summaryMatch) {
+        summary = summaryMatch[1];
       } else if (trimmed.startsWith('DTSTART')) {
         dtStart = trimmed;
       } else if (trimmed.startsWith('DTEND')) {

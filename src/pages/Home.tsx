@@ -8,11 +8,16 @@ import BunkMeter from '../components/BunkMeter';
 import ThemedIcon from '../components/ThemedIcon';
 import HelpTooltip from '../components/HelpTooltip';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { calculateSubjectStats, calculateOverallStats } from '../lib/calculations';
+import { calculateSubjectStats, calculateOverallStats, calculateAttendanceStreak } from '../lib/calculations';
 import type { Subject } from '../lib/types';
 import SemesterProgress from '../components/SemesterProgress';
+import SemesterEndedSummaryCard from '../components/SemesterEndedSummaryCard';
 import { WeeklyStrategyModal } from '../components/WeeklyStrategyModal';
+import { ArchiveSemesterModal } from '../components/settings/ArchiveSemesterModal';
+import { AppModal } from '../components/AppModal';
 import { registerBackHandler } from '../lib/backHandler';
+import { useCurrentDate } from '../lib/useCurrentDate';
+import { isSemesterEnded } from '../lib/dateUtils';
 
 // Lazy loaded heavy components
 const TimetableGrid = lazy(() => import('../components/TimetableGrid'));
@@ -26,25 +31,58 @@ interface Props {
 const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
   const { subjects, addSubject, updateSubject, deleteSubject } = useSubjects();
   const records = useAttendance((state) => state.records);
-  const streak = useAttendance((state) => state.getStreak());
   const settings = useSettings((state) => state.settings);
+  const setSettings = useSettings((state) => state.setSettings);
+  const archiveSemester = useSettings((state) => state.archiveSemester);
+  const streak = useMemo(
+    () => calculateAttendanceStreak(records, subjects, settings.holidays),
+    [records, subjects, settings.holidays]
+  );
 
   const [modalMode, setModalMode] = useState<'none' | 'add' | 'edit'>('none');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'timetable'>('dashboard');
   const [showWeeklyStrategy, setShowWeeklyStrategy] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [infoModal, setInfoModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'error' | 'alert' | 'success';
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'danger' | 'safe' | 'labs'>('all');
   const [sortBy, setSortBy] = useState<'risk' | 'attendance_asc' | 'attendance_desc' | 'name'>('risk');
-  const [now, setNow] = useState(new Date());
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const { now, todayStr } = useCurrentDate();
+  const semesterEnded = isSemesterEnded(settings.semesterEndDate, todayStr);
 
   // Hardware Back Button listener for Home modals and view mode
   React.useEffect(() => {
-    if (modalMode === 'none' && !showWeeklyStrategy && viewMode === 'dashboard') {
+    if (
+      modalMode === 'none' &&
+      !showWeeklyStrategy &&
+      viewMode === 'dashboard' &&
+      !deleteTarget &&
+      !showArchiveModal &&
+      !infoModal
+    ) {
       return;
     }
 
     const unregister = registerBackHandler(() => {
+      if (infoModal) {
+        setInfoModal(null);
+        return true;
+      }
+      if (showArchiveModal) {
+        setShowArchiveModal(false);
+        return true;
+      }
+      if (deleteTarget) {
+        setDeleteTarget(null);
+        return true;
+      }
       if (modalMode !== 'none') {
         setModalMode('none');
         setEditingSubject(null);
@@ -62,13 +100,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
     });
 
     return unregister;
-  }, [modalMode, showWeeklyStrategy, viewMode]);
-
-  // Update clock every minute
-  React.useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+  }, [modalMode, showWeeklyStrategy, viewMode, deleteTarget, showArchiveModal, infoModal]);
 
   // Compute Overall Bunk Budget & Overall Attendance using consolidated calculation engine
   const overallStats = React.useMemo(() => {
@@ -85,12 +117,12 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
     liveClass: { subject: Subject; time: string; endMins: number } | null;
     nextClass: { subject: Subject; time: string; startMins: number } | null;
   }>(() => {
-    if (subjects.length === 0) return { liveClass: null, nextClass: null };
+    if (subjects.length === 0 || semesterEnded) return { liveClass: null, nextClass: null };
 
     const today = now.getDay();
     const currentMins = now.getHours() * 60 + now.getMinutes();
 
-    let live: { subject: Subject; time: string; endMins: number } | null = null;
+    const liveCandidates: { subject: Subject; time: string; startMins: number; endMins: number }[] = [];
     const upcoming: { subject: Subject; time: string; startMins: number }[] = [];
 
     subjects.forEach((s) => {
@@ -102,7 +134,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
           const endMins = startMins + duration;
 
           if (currentMins >= startMins && currentMins < endMins) {
-            live = { subject: s, time: slot.slot, endMins };
+            liveCandidates.push({ subject: s, time: slot.slot, startMins, endMins });
           } else if (startMins > currentMins) {
             upcoming.push({ subject: s, time: slot.slot, startMins });
           }
@@ -110,22 +142,24 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       });
     });
 
+    liveCandidates.sort((a, b) => a.startMins - b.startMins || a.subject.name.localeCompare(b.subject.name));
     upcoming.sort((a, b) => a.startMins - b.startMins);
 
+    const firstLive = liveCandidates[0];
     return {
-      liveClass: live,
+      liveClass: firstLive ? { subject: firstLive.subject, time: firstLive.time, endMins: firstLive.endMins } : null,
       nextClass: upcoming[0] || null,
     };
-  }, [subjects, now]);
+  }, [subjects, now, semesterEnded]);
 
   // Precompute subject stats once upfront to prevent O(N log N) recalculations during filter & sort
   const subjectStatsMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof calculateSubjectStats>>();
     for (const s of subjects) {
-      map.set(s.id, calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays));
+      map.set(s.id, calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold));
     }
     return map;
-  }, [subjects, records, settings.semesterEndDate, settings.holidays]);
+  }, [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]);
 
   // Counts for filter chips derived from precomputed stats
   const filterCounts = useMemo(() => {
@@ -204,9 +238,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
   };
 
   const handleDeleteSubject = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      deleteSubject(id);
-    }
+    setDeleteTarget({ id, name });
   };
 
   const handleEditClick = (subject: Subject) => {
@@ -257,10 +289,11 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
       <AlertBanner subjects={subjects} />
 
       {/* Weekly Strategy Quick Action Card */}
-      {subjects.length > 0 && (
-        <div
+      {subjects.length > 0 && !semesterEnded && (
+        <button
+          type="button"
           onClick={() => setShowWeeklyStrategy(true)}
-          className="mb-6 neu-card rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
+          className="w-full text-left mb-6 neu-card rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
         >
           <div className="flex items-center gap-3.5">
             <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-blue-500">
@@ -284,7 +317,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </div>
-        </div>
+        </button>
       )}
 
       {/* View Toggle */}
@@ -317,6 +350,21 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
             <SemesterProgress semesterEndDate={settings.semesterEndDate} records={records} />
           )}
 
+          {subjects.length > 0 && semesterEnded && (
+            <SemesterEndedSummaryCard
+              subjects={subjects}
+              records={records}
+              settings={settings}
+              onStartNewSemester={() => setShowArchiveModal(true)}
+              onUpdateEndDate={async (nextDate) => {
+                await setSettings({ ...settings, semesterEndDate: nextDate });
+              }}
+              onModalMessage={(title, message, type) =>
+                setInfoModal({ isOpen: true, title, message, type })
+              }
+            />
+          )}
+
           {/* Animated Bunk Meter Component */}
           {subjects.length > 0 && (
             <div className="mb-5">
@@ -326,7 +374,9 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                 classesNeededTotal={overallStats.classesNeededTotal}
                 totalClasses={overallStats.totalClasses}
                 totalAttended={overallStats.totalAttended}
-                label="Overall Attendance"
+                label={semesterEnded ? 'Final Attendance' : 'Overall Attendance'}
+                isSemesterEnded={semesterEnded}
+                thresholdPct={Math.round(settings.globalThreshold * 100)}
               />
             </div>
           )}
@@ -412,6 +462,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                 </svg>
                 <select
+                  aria-label="Sort subjects"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'risk' | 'attendance_asc' | 'attendance_desc' | 'name')}
                   className="neu-flat-sm text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
@@ -434,6 +485,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                   </svg>
                   <input
                     type="text"
+                    aria-label="Filter subjects by name, room, or faculty"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Filter by subject, room (e.g. 302), faculty..."
@@ -511,6 +563,7 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
                   <SubjectCard
                     key={subject.id}
                     subject={subject}
+                    stats={subjectStatsMap.get(subject.id)}
                     index={idx}
                     onClick={() => onSelectSubject(subject)}
                     onEdit={() => handleEditClick(subject)}
@@ -545,6 +598,43 @@ const Home: React.FC<Props> = ({ onSelectSubject, onOpenCalendar }) => {
         isOpen={showWeeklyStrategy}
         onClose={() => setShowWeeklyStrategy(false)}
       />
+
+      {deleteTarget && (
+        <AppModal
+          isOpen={true}
+          title="Delete Subject"
+          message={`Are you sure you want to delete ${deleteTarget.name}? All attendance records for this subject will be lost.`}
+          type="confirm"
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={() => {
+            deleteSubject(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      <ArchiveSemesterModal
+        isOpen={showArchiveModal}
+        subjects={subjects}
+        records={records}
+        settings={settings}
+        onArchive={archiveSemester}
+        onClose={() => setShowArchiveModal(false)}
+        onError={(title, message) => setInfoModal({ isOpen: true, title, message, type: 'error' })}
+      />
+
+      {infoModal && (
+        <AppModal
+          isOpen={infoModal.isOpen}
+          title={infoModal.title}
+          message={infoModal.message}
+          type={infoModal.type}
+          confirmText="OK"
+          onConfirm={() => setInfoModal(null)}
+        />
+      )}
     </div>
   );
 };

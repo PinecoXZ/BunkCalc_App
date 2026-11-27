@@ -90,13 +90,18 @@ export const OledThemeCard: React.FC<ThemeCardProps> = ({
                   <span style={{ fontSize: '10px', color: '#71717a', fontWeight: 600 }}>
                     {stats.bunkBudget >= 0 ? `+${stats.bunkBudget} bunks` : `-${stats.classesNeededToRecover} classes`}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: stats.attendancePct >= 75 ? '#ffffff' : '#f43f5e', minWidth: '42px', textAlign: 'right' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: stats.attendancePct >= (s.threshold ?? 0.75) * 100 ? '#ffffff' : '#f43f5e', minWidth: '42px', textAlign: 'right' }}>
                     {stats.attendancePct.toFixed(0)}%
                   </span>
                 </div>
               </div>
             );
           })}
+          {subjectWithStats.length > 6 && (
+            <p style={{ fontSize: '10px', color: '#71717a', fontWeight: 700, textAlign: 'center', margin: '4px 0 0 0' }}>
+              +{subjectWithStats.length - 6} more subject{subjectWithStats.length - 6 === 1 ? '' : 's'}
+            </p>
+          )}
         </div>
       </div>
 

@@ -94,7 +94,7 @@ export const AcademicThemeCard: React.FC<ThemeCardProps> = ({
                     <td style={{ padding: '6px 0', textAlign: 'center', color: '#64748b', fontSize: '10px' }}>
                       {stats.bunkBudget >= 0 ? `${stats.bunkBudget}` : `Req ${stats.classesNeededToRecover}`}
                     </td>
-                    <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 800, color: stats.attendancePct >= 75 ? '#166534' : '#991b1b' }}>
+                    <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 800, color: stats.attendancePct >= (s.threshold ?? 0.75) * 100 ? '#166534' : '#991b1b' }}>
                       {stats.attendancePct.toFixed(0)}%
                     </td>
                   </tr>
@@ -102,6 +102,11 @@ export const AcademicThemeCard: React.FC<ThemeCardProps> = ({
               })}
             </tbody>
           </table>
+          {subjectWithStats.length > 6 && (
+            <p style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, textAlign: 'center', margin: '6px 0 0 0', fontFamily: 'system-ui, sans-serif' }}>
+              +{subjectWithStats.length - 6} more subject{subjectWithStats.length - 6 === 1 ? '' : 's'} not shown
+            </p>
+          )}
         </div>
       </div>
 

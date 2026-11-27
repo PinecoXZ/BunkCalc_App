@@ -8,7 +8,7 @@
       - style-src 'self' 'unsafe-inline': Inline styles needed by Tailwind CSS and html2canvas.
       - img-src 'self' data: blob:: data URIs for share card canvas, blobs for file sharing.
       - media-src 'self': Video for splash animation.
-      - connect-src 'self': No external network calls allowed (app is fully offline).
+      - connect-src 'self' https://raw.githubusercontent.com https://api.github.com https://github.com https://bunk-calc-web.vercel.app: Restricts network access strictly to public release update endpoints (no analytics or user-data endpoints).
       - object-src 'none': Blocks plugin/flash injection attacks.
       - base-uri 'self': Prevents base tag hijacking.
     -->

@@ -16,7 +16,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: "How do Lab sessions count in attendance?",
-    answer: "Lab sessions display as a 2-hour slot on your timetable and show a 'Lab' label. In attendance calculations, each lab session counts as 1 session (identical to theory classes)."
+    answer: "Lab sessions display as a 2-hour block on your timetable and count as 2 sessions in attendance totals, bunk budgets, and recovery calculations (matching standard college lab credits)."
   },
   {
     question: "What is Recovery Mode?",

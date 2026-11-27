@@ -2,7 +2,7 @@ import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/loc
 import type { Subject, AttendanceRecord, AppSettings } from './types';
 import { calculateSubjectStats } from './calculations';
 import { ensureNotificationPermission } from './permissions';
-import { toISODateStr } from './dateUtils';
+import { isSemesterEnded, toISODateStr } from './dateUtils';
 
 // Unique IDs for different notification types (spaced by 1,000,000 to prevent 7-day offset collisions)
 const NOTIF_ID_DAILY_BASE = 1000000;
@@ -84,12 +84,16 @@ export const scheduleDailyClassReminders = async (
     console.warn('Failed to clear pending notifications:', err);
   }
 
-  if (!settings.notificationsEnabled || settings.holidayMode) {
+  const now = new Date();
+  const todayStr = toISODateStr(now);
+
+  if (!settings.notificationsEnabled || settings.holidayMode || isSemesterEnded(settings.semesterEndDate, todayStr)) {
+    await cancelSundaySummary();
+    await scheduleDailyScheduleDigest(subjects, settings, records);
     return;
   }
 
   const notifications: LocalNotificationSchema[] = [];
-  const now = new Date();
 
   // Schedule reminders for the next 7 days (including today and the next 6 days)
   for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -97,14 +101,16 @@ export const scheduleDailyClassReminders = async (
     const targetDay = targetDate.getDay(); // 0-6 (0 is Sunday)
     const targetDateStr = toISODateStr(targetDate); // YYYY-MM-DD format
 
+    if (isSemesterEnded(settings.semesterEndDate, targetDateStr)) break;
+
     // Check if target date is in a holiday
     const isHoliday = settings.holidays?.some(h => targetDateStr >= h.startDate && targetDateStr <= h.endDate);
     if (isHoliday) continue;
 
     for (const subject of subjects) {
-      // RULE: If attendance is already marked for this subject on this date, DO NOT send any notification
-      const isAlreadyMarked = records.some(r => r.subjectId === subject.id && r.date === targetDateStr);
-      if (isAlreadyMarked) {
+      const todayRecords = records.filter(r => r.subjectId === subject.id && r.date === targetDateStr);
+      const hasLegacyRecord = todayRecords.some(r => !r.slot);
+      if (hasLegacyRecord) {
         continue;
       }
 
@@ -113,7 +119,13 @@ export const scheduleDailyClassReminders = async (
       const postClassDelayMinutes = 10; // Prompt sent 10 mins AFTER class end
       
       todaySlots.forEach((slot, index) => {
-        const [hours, minutes] = slot.slot.split(':').map(Number);
+        if (todayRecords.some(r => r.slot === slot.slot)) {
+          return;
+        }
+
+        const [rawH, rawM] = slot.slot.split(':').map(Number);
+        const hours = Number.isFinite(rawH) && rawH >= 0 && rawH <= 23 ? rawH : 9;
+        const minutes = Number.isFinite(rawM) && rawM >= 0 && rawM <= 59 ? rawM : 0;
         const classDate = new Date(targetDate);
         classDate.setHours(hours, minutes, 0, 0);
 
@@ -131,7 +143,7 @@ export const scheduleDailyClassReminders = async (
                 : `${subject.name} starts in ${settings.reminderMinutesBefore} minutes.`,
               id: getReminderId(NOTIF_ID_DAILY_BASE, dayOffset, subject.id, index),
               schedule: { at: triggerDate },
-              extra: { subjectId: subject.id, type: 'pre_class' },
+              extra: { subjectId: subject.id, slot: slot.slot, type: 'pre_class' },
               smallIcon: 'ic_launcher',
               iconColor: '#3B82F6',
             });
@@ -149,7 +161,7 @@ export const scheduleDailyClassReminders = async (
                 : `Did you attend ${subject.name} today? Mark your attendance now!`,
               id: getReminderId(NOTIF_ID_POST_CLASS_BASE, dayOffset, subject.id, index),
               schedule: { at: postClassDate },
-              extra: { subjectId: subject.id, type: 'post_class' },
+              extra: { subjectId: subject.id, slot: slot.slot, type: 'post_class' },
               actionTypeId: 'ATTENDANCE_PROMPT',
               smallIcon: 'ic_launcher',
               iconColor: '#3B82F6',
@@ -164,23 +176,25 @@ export const scheduleDailyClassReminders = async (
     await LocalNotifications.schedule({ notifications });
   }
 
-  // Also schedule morning daily lock screen digest if enabled
+  // Also schedule morning daily lock screen digest and Sunday risk summary
   await scheduleDailyScheduleDigest(subjects, settings, records);
+  await scheduleSundaySummary(subjects, records, settings);
 };
 
 /**
  * Cancel any pending pre-class and post-class notification for a subject today once attendance is marked
  */
-const cancelTodayClassReminders = async (subjectId: string) => {
+const cancelTodayClassReminders = async (subjectId: string, slotTime?: string) => {
   try {
     const pending = await LocalNotifications.getPending();
     const toCancel = pending.notifications
       .filter(n => {
         const isClassReminder = n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_THRESHOLD_BASE;
         const matchesSubject = n.extra?.subjectId === subjectId;
+        const matchesSlot = !slotTime || !n.extra?.slot || n.extra.slot === slotTime;
         const isTodayReminder = (n.id >= NOTIF_ID_DAILY_BASE && n.id < NOTIF_ID_DAILY_BASE + 100000) ||
                                 (n.id >= NOTIF_ID_POST_CLASS_BASE && n.id < NOTIF_ID_POST_CLASS_BASE + 100000);
-        return isClassReminder && matchesSubject && isTodayReminder;
+        return isClassReminder && matchesSubject && matchesSlot && isTodayReminder;
       })
       .map(n => ({ id: n.id }));
 
@@ -202,15 +216,16 @@ export const handleAttendanceAlerts = async (
   subject: Subject,
   oldRecords: AttendanceRecord[],
   newRecords: AttendanceRecord[],
-  settings: AppSettings
+  settings: AppSettings,
+  slotTime?: string
 ) => {
-  // If user just marked attendance for today, cancel any pending post-class marking prompt for this subject
-  await cancelPostClassReminder(subject.id);
+  // If user just marked attendance for today, cancel any pending post-class marking prompt for this subject/slot
+  await cancelPostClassReminder(subject.id, slotTime);
 
   if (!settings.notificationsEnabled) return;
 
-  const oldStats = calculateSubjectStats(subject, oldRecords, settings.semesterEndDate, settings.holidays);
-  const newStats = calculateSubjectStats(subject, newRecords, settings.semesterEndDate, settings.holidays);
+  const oldStats = calculateSubjectStats(subject, oldRecords, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
+  const newStats = calculateSubjectStats(subject, newRecords, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
   
   const threshold = (subject.threshold ?? settings.globalThreshold) * 100;
   const subjectHash = getSubjectHash(subject.id);
@@ -260,6 +275,14 @@ export const handleAttendanceAlerts = async (
   }
 };
 
+const cancelSundaySummary = async () => {
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: NOTIF_ID_SUNDAY_SUMMARY }] });
+  } catch {
+    // ignore when unsupported or not pending
+  }
+};
+
 /**
  * Sunday 8PM Summary Notification for subjects at risk
  */
@@ -268,14 +291,25 @@ export const scheduleSundaySummary = async (
   records: AttendanceRecord[],
   settings: AppSettings
 ) => {
-  if (!settings.notificationsEnabled || settings.sundaySummaryNotification === false) return;
+  if (
+    !settings.notificationsEnabled ||
+    settings.holidayMode ||
+    settings.sundaySummaryNotification === false ||
+    isSemesterEnded(settings.semesterEndDate)
+  ) {
+    await cancelSundaySummary();
+    return;
+  }
 
   const atRiskSubjects = subjects.filter(s => {
-    const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
+    const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
     return stats.bunkBudget <= 5;
   });
 
-  if (atRiskSubjects.length === 0) return;
+  if (atRiskSubjects.length === 0) {
+    await cancelSundaySummary();
+    return;
+  }
 
   const nextSunday = new Date();
   const day = nextSunday.getDay();
@@ -289,7 +323,7 @@ export const scheduleSundaySummary = async (
 
   const isMeme = settings.toneMode === 'meme';
 
-  await LocalNotifications.cancel({ notifications: [{ id: NOTIF_ID_SUNDAY_SUMMARY }] });
+  await cancelSundaySummary();
 
   await LocalNotifications.schedule({
     notifications: [
@@ -333,9 +367,17 @@ export const scheduleDailyScheduleDigest = async (
     return;
   }
 
-  const [digestHour, digestMin] = (settings.dailyDigestTime || '07:30').split(':').map(Number);
+  const [rawHour, rawMin] = (settings.dailyDigestTime || '07:30').split(':').map(Number);
+  const digestHour = Number.isFinite(rawHour) && rawHour >= 0 && rawHour <= 23 ? rawHour : 7;
+  const digestMin = Number.isFinite(rawMin) && rawMin >= 0 && rawMin <= 59 ? rawMin : 30;
   const now = new Date();
   const isMeme = settings.toneMode === 'meme';
+
+  let totalSafeBunks = 0;
+  subjects.forEach(s => {
+    const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
+    totalSafeBunks += Math.max(0, stats.bunkBudget);
+  });
 
   // Schedule for each of the next 7 days
   const digestNotifs: LocalNotificationSchema[] = [];
@@ -343,6 +385,8 @@ export const scheduleDailyScheduleDigest = async (
     const targetDate = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
     const dayOfWeek = targetDate.getDay();
     const dateStr = toISODateStr(targetDate);
+
+    if (isSemesterEnded(settings.semesterEndDate, dateStr)) break;
 
     // Skip if holiday
     const isHoliday = settings.holidays?.some(h => dateStr >= h.startDate && dateStr <= h.endDate);
@@ -353,15 +397,9 @@ export const scheduleDailyScheduleDigest = async (
     if (classesToday.length === 0) continue;
 
     const notifDate = new Date(targetDate);
-    notifDate.setHours(digestHour || 7, digestMin || 30, 0, 0);
+    notifDate.setHours(digestHour, digestMin, 0, 0);
 
     if (notifDate.getTime() > now.getTime()) {
-      let totalSafeBunks = 0;
-      subjects.forEach(s => {
-        const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
-        totalSafeBunks += Math.max(0, stats.bunkBudget);
-      });
-
       digestNotifs.push({
         title: isMeme 
           ? `Today's Roll Call: ${classesToday.length} Classes ☕`
@@ -379,6 +417,20 @@ export const scheduleDailyScheduleDigest = async (
 
   if (digestNotifs.length > 0) {
     await LocalNotifications.schedule({ notifications: digestNotifs });
+  }
+};
+
+/** Cancels all pending local notifications (used on Factory Reset or Semester Archive). */
+export const cancelAllNotifications = async () => {
+  try {
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications.length > 0) {
+      await LocalNotifications.cancel({
+        notifications: pending.notifications.map((n) => ({ id: n.id })),
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to cancel all notifications:', err);
   }
 };
 

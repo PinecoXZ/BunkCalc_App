@@ -15,20 +15,29 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
   const { settings } = useSettings();
 
   const { subjectStrategies, totalClassesThisWeek, criticalCount, safeCount } = useMemo(() => {
+    if (!isOpen) {
+      return {
+        subjectStrategies: [],
+        totalClassesThisWeek: 0,
+        criticalCount: 0,
+        safeCount: 0,
+      };
+    }
+
     const totalClasses = subjects.reduce((sum, s) => {
       const multiplier = s.isLab ? 2 : 1;
       return sum + (s.schedule || []).length * multiplier;
     }, 0);
 
     const strategies = subjects.map((subject) => {
-      const stats = calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays);
+      const stats = calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
       const multiplier = subject.isLab ? 2 : 1;
       const weeklySlotsCount = (subject.schedule || []).length;
       const sessionsThisWeek = weeklySlotsCount * multiplier;
 
-      const thresholdPct = (subject.threshold || settings.globalThreshold) * 100;
-      const isCritical = stats.bunkBudget < 0 || stats.attendancePct < thresholdPct;
-      const isRisky = !isCritical && stats.bunkBudget <= 2;
+      const thresholdPct = (subject.threshold ?? settings.globalThreshold) * 100;
+      const isCritical = stats.bunkBudget < 0;
+      const isRisky = !isCritical && (stats.bunkBudget <= 2 || stats.attendancePct < thresholdPct);
       const isSafe = !isCritical && !isRisky;
 
       let advice: string;
@@ -38,7 +47,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
           : `Must attend all ${sessionsThisWeek} classes! Need ${stats.classesNeededToRecover} consecutive classes to recover above ${Math.round(thresholdPct)}%.`;
       } else if (isRisky) {
         const unit = subject.isLab ? (stats.bunkBudget === 1 ? 'lab' : 'labs') : (stats.bunkBudget === 1 ? 'bunk' : 'bunks');
-        advice = `Only ${stats.bunkBudget} ${unit} remaining. Recommended to attend all classes this week.`;
+        advice = `Current attendance is ${stats.attendancePct.toFixed(1)}% with ${stats.bunkBudget} ${unit} remaining. Attend classes this week to build buffer.`;
       } else {
         const safeToBunkThisWeek = Math.min(stats.bunkBudget, subject.isLab ? weeklySlotsCount : sessionsThisWeek);
         const unit = subject.isLab ? (safeToBunkThisWeek === 1 ? 'lab' : 'labs') : (safeToBunkThisWeek === 1 ? 'class' : 'classes');
@@ -66,7 +75,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
       criticalCount: critical,
       safeCount: safe,
     };
-  }, [subjects, records, settings]);
+  }, [isOpen, subjects, records, settings]);
 
   if (!isOpen) return null;
 
@@ -121,7 +130,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
 
         {/* Subject-wise breakdown */}
         <div className="p-5 overflow-y-auto flex-1 space-y-3.5">
-          {subjectStrategies.map(({ subject, stats, weeklySlotsCount, sessionsThisWeek, isCritical, isRisky, isSafe, advice }) => (
+          {subjectStrategies.map(({ subject, stats, weeklySlotsCount, sessionsThisWeek, isCritical, isRisky, advice }) => (
             <div
               key={subject.id}
               className="neu-flat-sm p-4 rounded-2xl space-y-2.5"
@@ -149,7 +158,7 @@ export const WeeklyStrategyModal: React.FC<WeeklyStrategyModalProps> = ({ isOpen
                       : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                   }`}
                 >
-                  {isCritical ? 'Must Attend' : isRisky ? 'Caution' : isSafe ? 'Safe' : 'Safe'}
+                  {isCritical ? 'Must Attend' : isRisky ? 'Caution' : 'Safe'}
                 </span>
               </div>
 

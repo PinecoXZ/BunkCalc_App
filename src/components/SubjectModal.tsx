@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Subject } from '../lib/types';
 import { useSettings } from '../store/useSettings';
@@ -22,7 +22,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
   
   // Custom time per day
   const [useCustomTime, setUseCustomTime] = useState(
-    subject ? subject.schedule.some((s, _, arr) => s.slot !== arr[0].slot) : false
+    subject && subject.schedule.length > 0
+      ? subject.schedule.some((s, _, arr) => s.slot !== arr[0].slot)
+      : false
   );
   const [globalSlot, setGlobalTime] = useState(subject?.schedule[0]?.slot || '09:00');
 
@@ -45,11 +47,25 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
     onConfirm: () => void;
   } | null>(null);
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !modal) {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [modal, onCancel]);
+
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const handleSave = () => {
     const days = Object.keys(scheduleMap).map(Number);
     const sanitizedName = sanitizeName(name);
+    const sanitizedRoom = sanitizeName(room) || undefined;
+    const sanitizedFaculty = sanitizeName(faculty) || undefined;
+    const prevTopRoom = sanitizeName(subject?.room || '') || undefined;
+    const prevTopFaculty = sanitizeName(subject?.faculty || '') || undefined;
     
     // Read pre-existing names (excluding the one being currently edited)
     const existingNames = useSubjects.getState().subjects
@@ -80,6 +96,13 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
       });
       return;
     }
+
+    const existingSlotsByDay = new Map<number, { room?: string; faculty?: string }>();
+    subject?.schedule.forEach((sc) => {
+      if (!existingSlotsByDay.has(Number(sc.day))) {
+        existingSlotsByDay.set(Number(sc.day), { room: sc.room, faculty: sc.faculty });
+      }
+    });
     
     const newSub: Subject = {
       id: subject?.id || uuidv4(),
@@ -87,14 +110,19 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
       credits,
       threshold,
       isLab,
-      room: room.trim() || undefined,
-      faculty: faculty.trim() || undefined,
-      schedule: days.map(day => ({ 
-        day, 
-        slot: useCustomTime ? scheduleMap[day] : globalSlot,
-        room: room.trim() || undefined,
-        faculty: faculty.trim() || undefined,
-      })),
+      room: sanitizedRoom,
+      faculty: sanitizedFaculty,
+      schedule: days.map(day => {
+        const prevSlot = existingSlotsByDay.get(day);
+        const keepCustomSlotRoom = prevSlot?.room && prevSlot.room !== prevTopRoom && sanitizedRoom === prevTopRoom;
+        const keepCustomSlotFaculty = prevSlot?.faculty && prevSlot.faculty !== prevTopFaculty && sanitizedFaculty === prevTopFaculty;
+        return {
+          day,
+          slot: (useCustomTime ? scheduleMap[day] : globalSlot) || '09:00',
+          room: keepCustomSlotRoom ? prevSlot.room : sanitizedRoom,
+          faculty: keepCustomSlotFaculty ? prevSlot.faculty : sanitizedFaculty,
+        };
+      }),
       attendedSoFar: Math.max(0, attendedSoFar),
       missedSoFar: Math.max(0, missedSoFar),
     };
@@ -117,10 +145,15 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="subject-modal-title"
+      className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+    >
       <div className="neu-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
         <header className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white">{subject ? 'Edit Subject' : 'Add New Subject'}</h2>
+          <h2 id="subject-modal-title" className="text-xl font-black text-slate-900 dark:text-white">{subject ? 'Edit Subject' : 'Add New Subject'}</h2>
           <button onClick={onCancel} aria-label="Close" className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -130,8 +163,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
 
         <div className="space-y-5">
           <div>
-            <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Subject Name</label>
+            <label htmlFor="subject-name-input" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Subject Name</label>
             <input 
+              id="subject-name-input"
               autoFocus
               placeholder="e.g. Data Structures" 
               value={name}
@@ -143,8 +177,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
           
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Room / Hall (Optional)</label>
+              <label htmlFor="subject-room-input" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Room / Hall (Optional)</label>
               <input 
+                id="subject-room-input"
                 placeholder="e.g. Room 304" 
                 value={room}
                 onChange={(e) => setRoom(e.target.value)}
@@ -153,8 +188,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
               />
             </div>
             <div>
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Faculty (Optional)</label>
+              <label htmlFor="subject-faculty-input" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Faculty (Optional)</label>
               <input 
+                id="subject-faculty-input"
                 placeholder="e.g. Prof. Sharma" 
                 value={faculty}
                 onChange={(e) => setFaculty(e.target.value)}
@@ -166,8 +202,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Credits</label>
+              <label htmlFor="subject-credits-select" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Credits</label>
               <select 
+                id="subject-credits-select"
                 value={credits}
                 onChange={(e) => setCredits(Number(e.target.value))}
                 className="neu-input w-full p-3 rounded-2xl text-sm font-bold text-slate-900 dark:text-white cursor-pointer"
@@ -176,8 +213,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Type</label>
+              <label htmlFor="subject-type-select" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Type</label>
               <select 
+                id="subject-type-select"
                 value={isLab ? 'lab' : 'theory'}
                 onChange={(e) => setIsLab(e.target.value === 'lab')}
                 className="neu-input w-full p-3 rounded-2xl text-sm font-bold text-slate-900 dark:text-white cursor-pointer"
@@ -187,8 +225,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Target %</label>
+              <label htmlFor="subject-threshold-select" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Target %</label>
               <select 
+                id="subject-threshold-select"
                 value={Math.round(threshold * 100)}
                 onChange={(e) => setThreshold(Number(e.target.value) / 100)}
                 className="neu-input w-full p-3 rounded-2xl text-sm font-bold text-slate-900 dark:text-white cursor-pointer"
@@ -202,8 +241,9 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
 
           {!useCustomTime && (
             <div>
-              <label className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Class Time</label>
+              <label htmlFor="subject-global-time" className="block text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Class Time</label>
               <input 
+                id="subject-global-time"
                 type="time"
                 value={globalSlot}
                 onChange={(e) => setGlobalTime(e.target.value)}
@@ -282,22 +322,24 @@ const SubjectModal: React.FC<Props> = ({ subject, onSave, onCancel }) => {
             </p>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Attended</label>
+                <label htmlFor="subject-attended-input" className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Attended</label>
                 <input 
+                  id="subject-attended-input"
                   type="number" 
                   min={0}
                   value={attendedSoFar}
-                  onChange={(e) => setAttendedSoFar(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setAttendedSoFar(Math.max(0, parseInt(e.target.value, 10) || 0))}
                   className="neu-input w-full p-2.5 rounded-2xl text-sm font-black text-slate-900 dark:text-white"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Missed</label>
+                <label htmlFor="subject-missed-input" className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Missed</label>
                 <input 
+                  id="subject-missed-input"
                   type="number" 
                   min={0}
                   value={missedSoFar}
-                  onChange={(e) => setMissedSoFar(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setMissedSoFar(Math.max(0, parseInt(e.target.value, 10) || 0))}
                   className="neu-input w-full p-2.5 rounded-2xl text-sm font-black text-slate-900 dark:text-white"
                 />
               </div>

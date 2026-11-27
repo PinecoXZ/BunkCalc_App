@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { hashPin, verifyPin } from '../lib/pinUtils';
 import PinKeypad from './PinKeypad';
 
 interface PinSetupModalProps {
@@ -23,6 +24,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   const [enteredPin, setEnteredPin] = useState('');
   const [newPinCandidate, setNewPinCandidate] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isOpen) return null;
 
@@ -35,6 +37,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   };
 
   const handleDigit = (digit: string) => {
+    if (isProcessing) return;
     triggerHaptic();
     setErrorMsg('');
     if (enteredPin.length < 4) {
@@ -42,30 +45,37 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       setEnteredPin(nextPin);
 
       if (nextPin.length === 4) {
-        handlePinComplete(nextPin);
+        void handlePinComplete(nextPin);
       }
     }
   };
 
   const handleDelete = () => {
+    if (isProcessing) return;
     triggerHaptic();
     setErrorMsg('');
     setEnteredPin(prev => prev.slice(0, -1));
   };
 
-  const handlePinComplete = (pin: string) => {
+  const handlePinComplete = async (pin: string) => {
     if (step === 'verify_old') {
-      if (pin === currentPin) {
-        if (initialMode === 'disable') {
-          onSuccess('');
-          onClose();
+      setIsProcessing(true);
+      try {
+        const matches = await verifyPin(pin, currentPin);
+        if (matches) {
+          if (initialMode === 'disable') {
+            onSuccess('');
+            onClose();
+          } else {
+            setStep('enter_new');
+            setEnteredPin('');
+          }
         } else {
-          setStep('enter_new');
+          setErrorMsg('Incorrect current PIN');
           setEnteredPin('');
         }
-      } else {
-        setErrorMsg('Incorrect current PIN');
-        setEnteredPin('');
+      } finally {
+        setIsProcessing(false);
       }
     } else if (step === 'enter_new') {
       setNewPinCandidate(pin);
@@ -73,8 +83,14 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       setEnteredPin('');
     } else if (step === 'confirm_new') {
       if (pin === newPinCandidate) {
-        onSuccess(pin);
-        onClose();
+        setIsProcessing(true);
+        try {
+          const hashed = await hashPin(pin);
+          onSuccess(hashed);
+          onClose();
+        } finally {
+          setIsProcessing(false);
+        }
       } else {
         setErrorMsg('PINs do not match. Try again.');
         setStep('enter_new');
@@ -85,19 +101,24 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   };
 
   const getTitle = () => {
-    if (step === 'verify_old') return 'Enter Current PIN';
+    if (step === 'verify_old') return initialMode === 'disable' ? 'Verify PIN to Disable Lock' : 'Enter Current PIN';
     if (step === 'enter_new') return initialMode === 'change' ? 'Enter New 4-Digit PIN' : 'Set 4-Digit Security PIN';
     return 'Confirm New PIN';
   };
 
   const getSubtitle = () => {
-    if (step === 'verify_old') return 'Verify your existing passcode';
+    if (step === 'verify_old') return initialMode === 'disable' ? 'Confirm your 4-digit PIN to turn off App Lock' : 'Verify your existing passcode';
     if (step === 'enter_new') return 'Choose a memorable 4-digit code';
     return 'Re-enter the same 4-digit code';
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pin-setup-title"
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+    >
       <div className="neu-card rounded-3xl p-6 w-full max-w-xs flex flex-col items-center">
         {/* Header Icon */}
         <div className="w-12 h-12 rounded-2xl neu-inset text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
@@ -106,7 +127,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
           </svg>
         </div>
 
-        <h3 className="text-base font-black text-slate-900 dark:text-white text-center tracking-tight">{getTitle()}</h3>
+        <h3 id="pin-setup-title" className="text-base font-black text-slate-900 dark:text-white text-center tracking-tight">{getTitle()}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-0.5 mb-5 font-medium">{getSubtitle()}</p>
 
         {/* 4 Dots Indicator */}

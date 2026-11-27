@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { authenticateWithBiometrics, checkBiometricAvailability } from '../lib/biometrics';
+import { verifyPin } from '../lib/pinUtils';
 import PinKeypad from './PinKeypad';
 
 interface Props {
@@ -8,17 +9,29 @@ interface Props {
   onSuccess: () => void;
 }
 
+const MAX_ATTEMPTS_BEFORE_LOCKOUT = 5;
+
 export const AppLockModal: React.FC<Props> = ({ correctPin, biometricsEnabled = true, onSuccess }) => {
   const [pin, setPin] = useState('');
   const [hasError, setHasError] = useState(false);
   const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutRemainingSec, setLockoutRemainingSec] = useState(0);
+
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
 
   const triggerBiometricAuth = useCallback(async () => {
     const res = await authenticateWithBiometrics('Scan fingerprint to unlock BunkCalc');
     if (res.success) {
-      onSuccess();
+      setFailedAttempts(0);
+      setLockoutRemainingSec(0);
+      onSuccessRef.current();
     }
-  }, [onSuccess]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -35,21 +48,44 @@ export const AppLockModal: React.FC<Props> = ({ correctPin, biometricsEnabled = 
     };
   }, [biometricsEnabled, triggerBiometricAuth]);
 
-  const handleDigit = (digit: string) => {
-    if (pin.length >= 4) return;
+  useEffect(() => {
+    if (lockoutRemainingSec <= 0) return;
+    const timer = setInterval(() => {
+      setLockoutRemainingSec((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutRemainingSec]);
+
+  const handleDigit = async (digit: string) => {
+    if (pin.length >= 4 || isVerifying || lockoutRemainingSec > 0) return;
     const newPin = pin + digit;
     setPin(newPin);
     setHasError(false);
 
     if (newPin.length === 4) {
-      if (newPin === correctPin) {
-        onSuccess();
-      } else {
-        setHasError(true);
-        setTimeout(() => {
-          setPin('');
-          setHasError(false);
-        }, 500);
+      setIsVerifying(true);
+      try {
+        const isValid = await verifyPin(newPin, correctPin);
+        if (isValid) {
+          setFailedAttempts(0);
+          setLockoutRemainingSec(0);
+          onSuccessRef.current();
+        } else {
+          const nextAttempts = failedAttempts + 1;
+          setFailedAttempts(nextAttempts);
+          if (nextAttempts >= MAX_ATTEMPTS_BEFORE_LOCKOUT) {
+            const penaltyExponent = Math.floor((nextAttempts - MAX_ATTEMPTS_BEFORE_LOCKOUT) / 3);
+            const cooldownSeconds = Math.min(300, 30 * Math.pow(2, penaltyExponent));
+            setLockoutRemainingSec(cooldownSeconds);
+          }
+          setHasError(true);
+          setTimeout(() => {
+            setPin('');
+            setHasError(false);
+          }, 500);
+        }
+      } finally {
+        setIsVerifying(false);
       }
     }
   };
@@ -105,7 +141,11 @@ export const AppLockModal: React.FC<Props> = ({ correctPin, biometricsEnabled = 
           })}
         </div>
 
-        {hasError && (
+        {lockoutRemainingSec > 0 ? (
+          <p className="text-xs font-bold text-red-500">
+            Too many failed attempts. Try again in {lockoutRemainingSec}s.
+          </p>
+        ) : hasError && (
           <p className="text-xs font-bold text-red-500 animate-pulse">Incorrect PIN. Try again.</p>
         )}
 

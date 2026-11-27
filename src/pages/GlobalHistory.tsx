@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAttendance } from '../store/useAttendance';
 import { useSubjects } from '../store/useSubjects';
 import { parseLocalDate } from '../lib/calculations';
 import EmptyState from '../components/EmptyState';
 import { AppModal } from '../components/AppModal';
+import { registerBackHandler } from '../lib/backHandler';
 
 interface Props {
   onBack: () => void;
@@ -30,6 +31,14 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
   } | null>(null);
 
   const [displayLimit, setDisplayLimit] = useState<number>(50);
+
+  useEffect(() => {
+    if (!modal) return;
+    return registerBackHandler(() => {
+      setModal(null);
+      return true;
+    });
+  }, [modal]);
 
   const sortedRecords = useMemo(() => {
     return [...records]
@@ -68,10 +77,14 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
       <div className="neu-card rounded-3xl p-5 mb-6 space-y-3">
         <div className="flex gap-3">
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1 truncate">Subject</label>
+            <label htmlFor="history-filter-subject" className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1 truncate">Subject</label>
             <select
+              id="history-filter-subject"
               value={filterSubjectId}
-              onChange={(e) => setFilterSubjectId(e.target.value)}
+              onChange={(e) => {
+                setFilterSubjectId(e.target.value);
+                setDisplayLimit(50);
+              }}
               className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
             >
               <option value="all" className="bg-slate-50 dark:bg-slate-900">All Subjects</option>
@@ -81,10 +94,14 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
             </select>
           </div>
           <div className="w-1/3 min-w-[100px]">
-            <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Status</label>
+            <label htmlFor="history-filter-status" className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Status</label>
             <select
+              id="history-filter-status"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setDisplayLimit(50);
+              }}
               className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
             >
               <option value="all" className="bg-slate-50 dark:bg-slate-900">All</option>
@@ -96,6 +113,7 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
         </div>
 
         <button 
+          type="button"
           onClick={() => setShowDateFilter(!showDateFilter)}
           className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider hover:underline"
         >
@@ -108,20 +126,28 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
         {showDateFilter && (
           <div className="flex gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/80">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Start Date</label>
+              <label htmlFor="history-filter-start" className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">Start Date</label>
               <input 
+                id="history-filter-start"
                 type="date" 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDisplayLimit(50);
+                }}
                 className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">End Date</label>
+              <label htmlFor="history-filter-end" className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1">End Date</label>
               <input 
+                id="history-filter-end"
                 type="date" 
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDisplayLimit(50);
+                }}
                 className="w-full neu-input rounded-xl px-3 py-2 text-xs font-bold outline-none text-slate-900 dark:text-white"
               />
             </div>
@@ -134,12 +160,32 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
       </div>
 
       <div className="space-y-3">
-        {visibleRecords.length === 0 ? (
+        {records.length === 0 ? (
           <EmptyState 
             icon="history"
             title="No Records Yet"
             subtitle="Your attendance log is empty. Start marking classes on the Today tab and your full history will show up here."
           />
+        ) : visibleRecords.length === 0 ? (
+          <div className="neu-card rounded-3xl p-8 text-center space-y-3">
+            <p className="text-base font-black text-slate-900 dark:text-white">No Matching Records</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              No attendance records match your active filters.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterSubjectId('all');
+                setFilterStatus('all');
+                setStartDate('');
+                setEndDate('');
+                setDisplayLimit(50);
+              }}
+              className="neu-btn px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400"
+            >
+              Reset Filters
+            </button>
+          </div>
         ) : (
           <>
             {visibleRecords.map((record) => (
@@ -147,6 +193,7 @@ const GlobalHistory: React.FC<Props> = ({ onBack }) => {
                 <div className="flex-1">
                   <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-0.5">
                     {parseLocalDate(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
+                    {record.slot ? ` • ${record.slot}` : ''}
                   </p>
                   <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">{getSubjectName(record.subjectId)}</h4>
                   {record.status !== 'cancelled' ? (

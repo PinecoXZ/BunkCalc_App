@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import type { ArchivedSemester } from '../../lib/types';
 import SubHeader from './SubHeader';
 import { exportAppState, clearAllStorage, importAppState, exportToCSV, exportToPDF } from '../../lib/storage';
+import { suppressAppLockTemporarily } from '../../lib/appLockBridge';
+import ArchivedSemestersSection from '../ArchivedSemestersSection';
 
 interface DataSettingsProps {
   archivedSemesters: ArchivedSemester[];
@@ -31,7 +33,8 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const inputElement = e.target;
+    // Reset immediately after capturing File reference so dismissing via Back button still allows re-selecting the same file
+    e.target.value = '';
     if (file) {
       onShowModal({
         isOpen: true,
@@ -43,7 +46,6 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
         onConfirm: async () => {
           try {
             await importAppState(file);
-            inputElement.value = '';
             onShowModal({
               isOpen: true,
               title: "Data Restored",
@@ -119,7 +121,10 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Backup</span>
         </button>
         
-        <label className="neu-btn p-4 rounded-2xl flex flex-col items-center gap-2 cursor-pointer text-center">
+        <label
+          onClick={() => suppressAppLockTemporarily()}
+          className="neu-btn p-4 rounded-2xl flex flex-col items-center gap-2 cursor-pointer text-center"
+        >
           <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-emerald-500">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h10a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -197,41 +202,25 @@ export const DataSettings: React.FC<DataSettingsProps> = ({
             </svg>
           </button>
           {showArchivedList && (
-            <div className="mt-3 space-y-2.5">
-              {archivedSemesters.map(sem => (
-                <div key={sem.id} className="neu-flat-sm rounded-2xl p-4 flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-white">{sem.name}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {sem.subjects.length} subjects • {sem.records.length} records • {sem.overallPct.toFixed(1)}% overall
-                    </p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                      Archived {new Date(sem.archivedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      onShowModal({
-                        isOpen: true,
-                        title: "Delete Semester",
-                        message: `Are you sure you want to delete archived semester "${sem.name}"? This action cannot be undone.`,
-                        type: "confirm",
-                        confirmText: "Delete",
-                        cancelText: "Cancel",
-                        onConfirm: () => {
-                          deleteArchivedSemester(sem.id);
-                        },
-                        onCancel: () => {}
-                      });
-                    }}
-                    className="neu-btn text-rose-500 p-2.5 rounded-xl"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+            <div className="mt-3">
+              <ArchivedSemestersSection
+                archivedSemesters={archivedSemesters}
+                title="Saved Archives"
+                onDeleteSemester={(sem) => {
+                  onShowModal({
+                    isOpen: true,
+                    title: "Delete Semester",
+                    message: `Are you sure you want to delete archived semester "${sem.name}"? This action cannot be undone.`,
+                    type: "confirm",
+                    confirmText: "Delete",
+                    cancelText: "Cancel",
+                    onConfirm: () => {
+                      deleteArchivedSemester(sem.id);
+                    },
+                    onCancel: () => {}
+                  });
+                }}
+              />
             </div>
           )}
         </div>

@@ -3,17 +3,25 @@ import type { Subject } from '../lib/types';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
 import { calculateSubjectStats } from '../lib/calculations';
+import { isSemesterEnded } from '../lib/dateUtils';
+import { useCurrentDate } from '../lib/useCurrentDate';
 
 const AlertBanner: React.FC<{ subjects: Subject[] }> = ({ subjects }) => {
   const { records } = useAttendance();
   const { settings } = useSettings();
+  const { todayStr } = useCurrentDate();
+  const semesterEnded = isSemesterEnded(settings.semesterEndDate, todayStr);
 
-  const atRiskSubjects = useMemo(() => subjects.filter((s) => {
-    const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
-    return stats.bunkBudget <= 3 || stats.attendancePct < (settings.globalThreshold + settings.warningBuffer) * 100;
-  }), [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold, settings.warningBuffer]);
+  const atRiskSubjects = useMemo(() => {
+    if (semesterEnded) return [];
+    return subjects.filter((s) => {
+      const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
+      const subjectThreshold = s.threshold ?? settings.globalThreshold;
+      return stats.bunkBudget <= 3 || stats.attendancePct < (subjectThreshold + settings.warningBuffer) * 100;
+    });
+  }, [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold, settings.warningBuffer, semesterEnded]);
 
-  if (atRiskSubjects.length === 0) return null;
+  if (semesterEnded || atRiskSubjects.length === 0) return null;
 
   return (
     <div className="relative neu-card border border-rose-500/30 rounded-2xl p-4 mb-6 flex items-center gap-3 bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent overflow-hidden anim-slide-up">

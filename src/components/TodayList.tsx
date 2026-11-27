@@ -12,16 +12,24 @@ import { useSwipeGesture } from '../lib/useSwipeGesture';
 
 import { calculateSubjectStats } from '../lib/calculations';
 import { getFromStorage, saveToStorage } from '../lib/storage';
-import { toISODateStr } from '../lib/dateUtils';
+import { useCurrentDate } from '../lib/useCurrentDate';
+import { registerBackHandler } from '../lib/backHandler';
+import { isSemesterEnded } from '../lib/dateUtils';
+import SemesterEndedSummaryCard from './SemesterEndedSummaryCard';
 
-const TodayList: React.FC = () => {
+interface TodayListProps {
+  onStartNewSemester?: () => void;
+}
+
+const TodayList: React.FC<TodayListProps> = ({ onStartNewSemester }) => {
   const subjects = useSubjects((state) => state.subjects);
   const { records, markAttendance, markMultipleAttendance, unmarkAttendance, unmarkMultipleAttendance, undoLastAction, clearLastAction } = useAttendance();
   const settings = useSettings((state) => state.settings);
+  const setSettings = useSettings((state) => state.setSettings);
 
   // Toast & Celebration state
   const [toast, setToast] = useState<{ subjectName: string; status: AttendanceStatus } | null>(null);
-  const [celebration, setCelebration] = useState<'present' | 'absent' | null>(null);
+  const [celebration, setCelebration] = useState<{ type: 'present' | 'absent'; id: number } | null>(null);
 
   // Modal Dialog state for validation/errors
   const [modal, setModal] = useState<{
@@ -31,15 +39,24 @@ const TodayList: React.FC = () => {
     type?: 'error' | 'alert' | 'success' | 'confirm';
     confirmText?: string;
     onConfirm: () => void;
+    onCancel?: () => void;
   } | null>(null);
+
+  useEffect(() => {
+    if (!modal) return;
+    return registerBackHandler(() => {
+      setModal(null);
+      return true;
+    });
+  }, [modal]);
 
   // Helper to determine bunk safety
   const bunkSafeties = React.useMemo(() => {
     const safeties: Record<string, { label: string; color: string }> = {};
     subjects.forEach(subject => {
-      const stats = calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays);
-      const threshold = (subject.threshold || settings.globalThreshold) * 100;
-      const warningZone = ((subject.threshold || settings.globalThreshold) + settings.warningBuffer) * 100;
+      const stats = calculateSubjectStats(subject, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
+      const threshold = (subject.threshold ?? settings.globalThreshold) * 100;
+      const warningZone = ((subject.threshold ?? settings.globalThreshold) + settings.warningBuffer) * 100;
 
       if (stats.bunkBudget < 0 || (stats.totalClasses > 0 && stats.attendancePct < threshold)) {
         safeties[subject.id] = { label: 'CRITICAL', color: 'bg-red-500 text-white' };
@@ -56,21 +73,31 @@ const TodayList: React.FC = () => {
     return bunkSafeties[subject.id] || { label: 'SAFE', color: 'bg-green-500 text-white' };
   };
 
-  // Use local date for consistency across the app
-  const now = new Date();
+  // Use reactive local date so midnight rollovers and app resumes stay accurate
+  const { now, todayStr: dateStr } = useCurrentDate();
   const today = now.getDay(); // 0-6 local
-  
-  // Format: YYYY-MM-DD local
-  const dateStr = toISODateStr(now);
 
   const todayHoliday = settings.holidays?.find(
     (h) => dateStr >= h.startDate && dateStr <= h.endDate
   );
+  const semesterEnded = isSemesterEnded(settings.semesterEndDate, dateStr);
   const [showOverriddenSchedule, setShowOverriddenSchedule] = useState(false);
 
-  const todayClasses = subjects.filter((s) => 
-    s.schedule.some((slot) => Number(slot.day) === today)
-  );
+  const todaySlotEntries = React.useMemo(() => {
+    const entries: Array<{ key: string; subject: Subject; slotInfo: Subject['schedule'][number]; slotIdx: number }> = [];
+    subjects.forEach((subject) => {
+      const matchingSlots = subject.schedule.filter((slot) => Number(slot.day) === today);
+      matchingSlots.forEach((slotInfo, slotIdx) => {
+        entries.push({
+          key: `${subject.id}_${slotInfo.slot}_${slotIdx}`,
+          subject,
+          slotInfo,
+          slotIdx,
+        });
+      });
+    });
+    return entries.sort((a, b) => a.slotInfo.slot.localeCompare(b.slotInfo.slot));
+  }, [subjects, today]);
 
   const todayRecords = records.filter((r) => r.date === dateStr);
 
@@ -83,7 +110,7 @@ const TodayList: React.FC = () => {
 
   const handleMarkRef = useRef<((subjectId: string, status: AttendanceStatus, slot: string, bypassTimeCheck?: boolean) => Promise<void>) | null>(null);
 
-  // Swipe and gesture handling via custom hook
+  // Swipe and gesture handling via custom hook (extraData carries "subjectId|slotTime")
   const {
     swipeOffsets,
     snappedLeft,
@@ -92,13 +119,15 @@ const TodayList: React.FC = () => {
     onPointerUp,
     onPointerCancel,
     resetSwipe,
-  } = useSwipeGesture({
-    onSwipeRight: (subjectId, slotTime) => {
-      handleMarkRef.current?.(subjectId, 'present', slotTime || '');
+  } = useSwipeGesture<{ subjectId: string; slotTime: string }>({
+    onSwipeRight: (_entryKey, meta) => {
+      if (meta) {
+        handleMarkRef.current?.(meta.subjectId, 'present', meta.slotTime);
+      }
     },
   });
 
-  const executeMark = useCallback(async (subjectId: string, status: AttendanceStatus) => {
+  const executeMark = useCallback(async (subjectId: string, status: AttendanceStatus, slotTime?: string) => {
     // Trigger haptic feedback
     if (settings.hapticsEnabled) {
       try {
@@ -114,33 +143,36 @@ const TodayList: React.FC = () => {
       id: uuidv4(),
       subjectId,
       date: dateStr,
+      slot: slotTime,
       status,
     });
 
-    // Reset swipe and snap offsets for this subject
-    resetSwipe(subjectId);
+    // Reset swipe and snap offsets for this entry
+    resetSwipe(slotTime ? `${subjectId}_${slotTime}` : subjectId);
 
     // Show undo toast & visual celebration feedback
     setToast({ subjectName, status });
     if (status === 'present' || status === 'absent') {
-      setCelebration(status);
+      setCelebration({ type: status, id: Date.now() });
     }
 
     // Show cancelled class explanation if status is cancelled
     if (status === 'cancelled') {
-      getFromStorage<string>('has_seen_cancelled_tooltip').then(hasSeen => {
-        if (!hasSeen) {
-          saveToStorage('has_seen_cancelled_tooltip', 'true');
-          setModal({
-            isOpen: true,
-            title: "Cancelled Class Behavior",
-            message: "A cancelled class shrinks your total semester session pool. This slightly reduces your bunk budget — it does not count as a free bunk.",
-            type: "alert",
-            confirmText: "Got It",
-            onConfirm: () => setModal(null)
-          });
-        }
-      });
+      getFromStorage<string>('has_seen_cancelled_tooltip')
+        .then((hasSeen) => {
+          if (!hasSeen) {
+            saveToStorage('has_seen_cancelled_tooltip', 'true').catch(() => {});
+            setModal({
+              isOpen: true,
+              title: "Cancelled Class Behavior",
+              message: "A cancelled class shrinks your total semester session pool. This slightly reduces your bunk budget — it does not count as a free bunk.",
+              type: "alert",
+              confirmText: "Got It",
+              onConfirm: () => setModal(null)
+            });
+          }
+        })
+        .catch(() => {});
     }
   }, [settings.hapticsEnabled, markAttendance, dateStr, subjects, resetSwipe]);
 
@@ -148,7 +180,7 @@ const TodayList: React.FC = () => {
     // Check if class has started
     const [hours, minutes] = slot.split(':').map(Number);
     const classStartTime = new Date();
-    classStartTime.setHours(hours, minutes, 0, 0);
+    classStartTime.setHours(hours || 0, minutes || 0, 0, 0);
 
     if (!bypassTimeCheck && new Date().getTime() < classStartTime.getTime()) {
       setModal({
@@ -159,20 +191,33 @@ const TodayList: React.FC = () => {
         confirmText: "Mark Anyway",
         onConfirm: async () => {
           setModal(null);
-          await executeMark(subjectId, status);
-        }
+          await executeMark(subjectId, status, slot);
+        },
+        onCancel: () => setModal(null),
       });
       // Slide it back to closed
-      resetSwipe(subjectId);
+      resetSwipe(`${subjectId}_${slot}`);
       return;
     }
 
-    await executeMark(subjectId, status);
+    await executeMark(subjectId, status, slot);
   }, [executeMark, resetSwipe]);
 
   useEffect(() => {
     handleMarkRef.current = handleMark;
   }, [handleMark]);
+
+  const getRecordForSlotToday = useCallback(
+    (subjectId: string, slotTime: string, slotIdx: number) => {
+      return (
+        records.find((r) => r.subjectId === subjectId && r.date === dateStr && r.slot === slotTime) ??
+        (slotIdx === 0
+          ? records.find((r) => r.subjectId === subjectId && r.date === dateStr && !r.slot)
+          : undefined)
+      );
+    },
+    [records, dateStr]
+  );
 
   // Batch Mark All Present (1 single transaction & sync)
   const handleMarkAllPresent = async () => {
@@ -184,19 +229,22 @@ const TodayList: React.FC = () => {
       }
     }
 
-    const unmarked = todayClasses.filter(s => !getStatusForToday(s.id));
+    const unmarked = todaySlotEntries.filter(
+      (entry) => !getRecordForSlotToday(entry.subject.id, entry.slotInfo.slot, entry.slotIdx)
+    );
     if (unmarked.length === 0) return;
 
-    const newEntries = unmarked.map(s => ({
+    const newEntries = unmarked.map((entry) => ({
       id: uuidv4(),
-      subjectId: s.id,
+      subjectId: entry.subject.id,
       date: dateStr,
+      slot: entry.slotInfo.slot,
       status: 'present' as AttendanceStatus,
     }));
 
     await markMultipleAttendance(newEntries);
 
-    setCelebration('present');
+    setCelebration({ type: 'present', id: Date.now() });
     setToast({ subjectName: `All ${unmarked.length} Classes`, status: 'present' });
   };
 
@@ -209,10 +257,6 @@ const TodayList: React.FC = () => {
     clearLastAction();
     setToast(null);
   }, [clearLastAction]);
-
-  const getStatusForToday = (subjectId: string) => {
-    return records.find((r) => r.subjectId === subjectId && r.date === dateStr)?.status;
-  };
 
   if (settings.holidayMode) {
     return (
@@ -229,6 +273,50 @@ const TodayList: React.FC = () => {
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (semesterEnded && !showOverriddenSchedule) {
+    return (
+      <>
+        <SemesterEndedSummaryCard
+          compact
+          subjects={subjects}
+          records={records}
+          settings={settings}
+          onStartNewSemester={() => onStartNewSemester?.()}
+          onUpdateEndDate={async (nextDate) => {
+            await setSettings({ ...settings, semesterEndDate: nextDate });
+          }}
+          onModalMessage={(title, message, type) =>
+            setModal({ isOpen: true, title, message, type, confirmText: 'OK', onConfirm: () => setModal(null) })
+          }
+        />
+
+        {todaySlotEntries.length > 0 && (
+          <div className="text-center pt-1 pb-2">
+            <button
+              type="button"
+              onClick={() => setShowOverriddenSchedule(true)}
+              className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              Had a makeup or extra class? Show regular schedule ({todaySlotEntries.length} slots) ↓
+            </button>
+          </div>
+        )}
+
+        {modal && (
+          <AppModal
+            isOpen={modal.isOpen}
+            title={modal.title}
+            message={modal.message}
+            type={modal.type}
+            confirmText={modal.confirmText}
+            onConfirm={modal.onConfirm}
+            onCancel={modal.onCancel}
+          />
+        )}
+      </>
     );
   }
 
@@ -277,13 +365,13 @@ const TodayList: React.FC = () => {
           </div>
         )}
 
-        {todayClasses.length > 0 && (
+        {todaySlotEntries.length > 0 && (
           <div className="pt-2">
             <button
               onClick={() => setShowOverriddenSchedule(true)}
               className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
             >
-              Had a special makeup class? View regular timetable ({todayClasses.length} slots) ↓
+              Had a special makeup class? View regular timetable ({todaySlotEntries.length} slots) ↓
             </button>
           </div>
         )}
@@ -291,7 +379,7 @@ const TodayList: React.FC = () => {
     );
   }
 
-  if (todayClasses.length === 0) {
+  if (todaySlotEntries.length === 0) {
     return (
       <div className="neu-card rounded-3xl p-10 text-center">
         <div className="neu-inset w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -305,13 +393,30 @@ const TodayList: React.FC = () => {
     );
   }
 
-  const markedCount = todayClasses.filter(s => !!getStatusForToday(s.id)).length;
-  const totalToday = todayClasses.length;
+  const markedCount = todaySlotEntries.filter(
+    (entry) => !!getRecordForSlotToday(entry.subject.id, entry.slotInfo.slot, entry.slotIdx)
+  ).length;
+  const totalToday = todaySlotEntries.length;
   const allMarked = totalToday > 0 && markedCount === totalToday;
   const progressPct = totalToday > 0 ? (markedCount / totalToday) * 100 : 0;
 
   return (
     <>
+      {semesterEnded && (
+        <div className="neu-card border-blue-500/30 rounded-2xl p-3.5 mb-4 flex justify-between items-center text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-blue-600 dark:text-blue-400 font-bold">Semester Ended:</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">Showing makeup schedule</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowOverriddenSchedule(false)}
+            className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 cursor-pointer"
+          >
+            Back to Summary
+          </button>
+        </div>
+      )}
       {todayHoliday && (
         <div className="neu-card border-amber-500/30 rounded-2xl p-3.5 mb-4 flex justify-between items-center text-xs">
           <div className="flex items-center gap-2">
@@ -378,15 +483,16 @@ const TodayList: React.FC = () => {
       </div>
 
       <div className="space-y-3.5">
-        {todayClasses.map((subject) => {
-          const currentStatus = getStatusForToday(subject.id);
-          const slotInfo = subject.schedule.find(s => Number(s.day) === today);
-          const slotTime = slotInfo?.slot || '09:00';
+        {todaySlotEntries.map(({ key, subject, slotInfo, slotIdx }) => {
+          const todayRecord = getRecordForSlotToday(subject.id, slotInfo.slot, slotIdx);
+          const currentStatus = todayRecord?.status;
+          const slotTime = slotInfo.slot || '09:00';
+          const swipeKey = `${subject.id}_${slotTime}`;
           const safety = getBunkSafety(subject);
-          const offset = swipeOffsets[subject.id] || (snappedLeft[subject.id] ? -200 : 0);
+          const offset = swipeOffsets[swipeKey] || (snappedLeft[swipeKey] ? -200 : 0);
           
           return (
-            <div key={subject.id} className="relative overflow-hidden rounded-2xl select-none">
+            <div key={key} className="relative overflow-hidden rounded-2xl select-none">
               {/* Background actions revealed on swipe */}
               <div className="absolute inset-0 flex">
                 {/* Right swipe background (Present) */}
@@ -431,16 +537,18 @@ const TodayList: React.FC = () => {
               {/* Main card (swipeable) */}
               <div 
                 aria-label={"Mark attendance for " + subject.name}
-                className="neu-card p-4 flex items-center justify-between relative cursor-grab active:cursor-grabbing rounded-3xl overflow-hidden"
+                className={`neu-card p-4 relative cursor-grab active:cursor-grabbing rounded-3xl overflow-hidden ${
+                  currentStatus ? 'flex items-center justify-between' : 'flex flex-col gap-3'
+                }`}
                 style={{ 
                   transform: `translateX(${offset}px)`,
                   transition: offset === 0 || offset === -200 ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
                   touchAction: 'pan-y'
                 }}
-                onPointerDown={(e) => onPointerDown(e, subject.id)}
+                onPointerDown={(e) => onPointerDown(e, swipeKey)}
                 onPointerMove={onPointerMove}
-                onPointerUp={(e) => onPointerUp(e, subject.id, slotTime)}
-                onPointerCancel={() => onPointerCancel(subject.id)}
+                onPointerUp={(e) => onPointerUp(e, swipeKey, { subjectId: subject.id, slotTime })}
+                onPointerCancel={() => onPointerCancel(swipeKey)}
               >
                 {/* Safety Indicator Pill */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${safety.color.split(' ')[0]}`}></div>
@@ -469,7 +577,7 @@ const TodayList: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex-1 min-w-0 mr-3 pl-2">
+                <div className={`flex-1 min-w-0 pl-2 ${currentStatus ? 'mr-3' : ''}`}>
                   <div className="flex items-center gap-2">
                     <h4 className="font-extrabold text-base truncate text-slate-900 dark:text-white">{subject.name}</h4>
                     <span className={`neu-flat-sm text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider ${safety.color}`}>
@@ -496,7 +604,7 @@ const TodayList: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className={currentStatus ? 'flex items-center gap-2 flex-shrink-0' : 'w-full pl-2'}>
                   {currentStatus ? (
                     /* ALREADY MARKED: Show status badge + Copy Notice + Reset button */
                     <div className="flex items-center gap-1.5">
@@ -532,9 +640,10 @@ const TodayList: React.FC = () => {
                               const facultyText = (slotInfo?.faculty || subject.faculty) ? ` (${slotInfo?.faculty || subject.faculty})` : '';
                               const text = `CLASS NOTICE: ${subject.name} scheduled for ${slotTime}${roomText}${facultyText} is CANCELLED today.`;
                               try {
-                                if (navigator.clipboard) {
-                                  await navigator.clipboard.writeText(text);
+                                if (!navigator.clipboard) {
+                                  throw new Error('Clipboard API unavailable');
                                 }
+                                await navigator.clipboard.writeText(text);
                                 setModal({
                                   isOpen: true,
                                   title: "Notice Copied",
@@ -544,7 +653,14 @@ const TodayList: React.FC = () => {
                                   onConfirm: () => setModal(null)
                                 });
                               } catch {
-                                // fallback
+                                setModal({
+                                  isOpen: true,
+                                  title: "Copy Cancellation Notice",
+                                  message: `Clipboard access is unavailable. Copy manually:\n\n${text}`,
+                                  type: "alert",
+                                  confirmText: "OK",
+                                  onConfirm: () => setModal(null)
+                                });
                               }
                             }}
                             title="Copy cancellation message for WhatsApp"
@@ -562,7 +678,6 @@ const TodayList: React.FC = () => {
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
-                          const todayRecord = records.find(r => r.subjectId === subject.id && r.date === dateStr);
                           if (todayRecord) {
                             await unmarkAttendance(todayRecord.id);
                           }
@@ -577,11 +692,11 @@ const TodayList: React.FC = () => {
                     </div>
                   ) : (
                     /* UNMARKED: 1-Tap Quick Action Buttons */
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="grid grid-cols-3 gap-2 w-full" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={async () => await handleMark(subject.id, 'present', slotTime)}
                         title="Mark Present"
-                        className="neu-btn-present px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
+                        className="neu-btn-present px-2.5 py-2 rounded-2xl text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -592,7 +707,7 @@ const TodayList: React.FC = () => {
                       <button
                         onClick={async () => await handleMark(subject.id, 'absent', slotTime)}
                         title="Mark Absent"
-                        className="neu-btn-absent px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1 cursor-pointer"
+                        className="neu-btn-absent px-2.5 py-2 rounded-2xl text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -603,7 +718,7 @@ const TodayList: React.FC = () => {
                       <button
                         onClick={async () => await handleMark(subject.id, 'cancelled', slotTime)}
                         title="Mark Cancelled"
-                        className="neu-btn px-2 sm:px-2.5 py-1.5 rounded-2xl text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                        className="neu-btn px-2 py-2 rounded-2xl text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
@@ -629,8 +744,14 @@ const TodayList: React.FC = () => {
         />
       )}
 
-      {/* Celebration & Warning Overlay */}
-      <CelebrationOverlay type={celebration} onDone={() => setCelebration(null)} />
+      {/* Celebration & Warning Overlay (remounted per trigger so Meme Roast text refreshes) */}
+      {celebration && (
+        <CelebrationOverlay
+          key={celebration.id}
+          type={celebration.type}
+          onDone={() => setCelebration(null)}
+        />
+      )}
 
       {/* AppModal fallback for Class Not Started alert */}
       {modal && (
@@ -641,6 +762,7 @@ const TodayList: React.FC = () => {
           type={modal.type}
           confirmText={modal.confirmText}
           onConfirm={modal.onConfirm}
+          onCancel={modal.onCancel}
         />
       )}
     </>

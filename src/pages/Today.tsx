@@ -2,27 +2,39 @@ import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import TodayList from '../components/TodayList';
 import ShareModal from '../components/ShareModal';
+import { ArchiveSemesterModal } from '../components/settings/ArchiveSemesterModal';
+import { AppModal } from '../components/AppModal';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
-import { AppModal } from '../components/AppModal';
 import { registerBackHandler } from '../lib/backHandler';
-import { toISODateStr } from '../lib/dateUtils';
+import { useCurrentDate } from '../lib/useCurrentDate';
+import { isSemesterEnded } from '../lib/dateUtils';
 
 const Today: React.FC = () => {
   const { subjects } = useSubjects();
   const { records } = useAttendance();
-  const { settings, addHoliday, deleteHoliday } = useSettings();
+  const { settings, addHoliday, deleteHoliday, archiveSemester } = useSettings();
   const [showShareModal, setShowShareModal] = useState(false);
-  const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type?: 'error' } | null>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [infoModal, setInfoModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'error' | 'alert' | 'success';
+  } | null>(null);
 
   // Hardware Back Button listener
   React.useEffect(() => {
-    if (!showShareModal && !modal) return;
+    if (!showShareModal && !showArchiveModal && !infoModal) return;
 
     const unregister = registerBackHandler(() => {
-      if (modal) {
-        setModal(null);
+      if (infoModal) {
+        setInfoModal(null);
+        return true;
+      }
+      if (showArchiveModal) {
+        setShowArchiveModal(false);
         return true;
       }
       if (showShareModal) {
@@ -33,10 +45,10 @@ const Today: React.FC = () => {
     });
 
     return unregister;
-  }, [showShareModal, modal]);
+  }, [showShareModal, showArchiveModal, infoModal]);
 
-  const now = new Date();
-  const todayDateStr = toISODateStr(now);
+  const { todayStr: todayDateStr } = useCurrentDate();
+  const semesterEnded = isSemesterEnded(settings.semesterEndDate, todayDateStr);
   const todayHoliday = settings.holidays?.find(h => todayDateStr >= h.startDate && todayDateStr <= h.endDate);
 
   return (
@@ -44,7 +56,9 @@ const Today: React.FC = () => {
       <header className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Today</h1>
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase">Mark your attendance</p>
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase">
+            {semesterEnded ? 'Semester completed' : 'Mark your attendance'}
+          </p>
         </div>
         <button 
           onClick={() => setShowShareModal(true)}
@@ -57,50 +71,56 @@ const Today: React.FC = () => {
         </button>
       </header>
 
-      {todayHoliday ? (
-        <div className="mb-6 neu-card rounded-3xl p-4.5 border-amber-500/30 flex justify-between items-center">
-          <div className="flex items-center gap-3.5">
-            <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-amber-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+      {!semesterEnded && (
+        todayHoliday ? (
+          <div className="mb-6 neu-card rounded-3xl p-4.5 border-amber-500/30 flex justify-between items-center">
+            <div className="flex items-center gap-3.5">
+              <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-amber-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-amber-600 dark:text-amber-400 font-extrabold text-sm">Today is a Holiday</p>
+                <p className="text-amber-600/80 dark:text-amber-400/80 text-xs font-medium">{todayHoliday.name || 'Academic Holiday'} • No classes scheduled</p>
+              </div>
             </div>
-            <div>
-              <p className="text-amber-600 dark:text-amber-400 font-extrabold text-sm">Today is a Holiday</p>
-              <p className="text-amber-600/80 dark:text-amber-400/80 text-xs font-medium">{todayHoliday.name || 'Academic Holiday'} • No classes scheduled</p>
-            </div>
+            <button 
+              onClick={() => deleteHoliday(todayHoliday.id)}
+              className="neu-btn text-xs font-bold text-amber-600 dark:text-amber-400 px-3.5 py-1.5 rounded-xl cursor-pointer"
+            >
+              Remove
+            </button>
           </div>
-          <button 
-            onClick={() => deleteHoliday(todayHoliday.id)}
-            className="neu-btn text-xs font-bold text-amber-600 dark:text-amber-400 px-3.5 py-1.5 rounded-xl cursor-pointer"
+        ) : (
+          <button
+            onClick={() => addHoliday({ id: uuidv4(), name: 'Holiday', startDate: todayDateStr, endDate: todayDateStr })}
+            className="mb-6 w-full neu-card rounded-3xl p-4 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 cursor-pointer active:scale-[0.99] transition-all"
           >
-            Remove
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="font-extrabold text-sm">Mark Today as Holiday</span>
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => addHoliday({ id: uuidv4(), name: 'Holiday', startDate: todayDateStr, endDate: todayDateStr })}
-          className="mb-6 w-full neu-card rounded-3xl p-4 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 cursor-pointer active:scale-[0.99] transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="font-extrabold text-sm">Mark Today as Holiday</span>
-        </button>
+        )
       )}
 
       <section>
-        <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Daily Schedule</h2>
-        <TodayList />
+        <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">
+          {semesterEnded ? 'End of Semester' : 'Daily Schedule'}
+        </h2>
+        <TodayList onStartNewSemester={() => setShowArchiveModal(true)} />
       </section>
       
-      <div className="mt-8 neu-card rounded-3xl p-4.5">
-        <p className="text-blue-500 dark:text-blue-400 text-xs font-black mb-1 uppercase tracking-wider">Attendance Tip</p>
-        <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed font-medium">
-          Marking attendance here updates your "Bunk Budget" in real-time. 
-          Use 'Cancel' for cancelled classes to exclude them from calculations.
-        </p>
-      </div>
+      {!semesterEnded && (
+        <div className="mt-8 neu-card rounded-3xl p-4.5">
+          <p className="text-blue-500 dark:text-blue-400 text-xs font-black mb-1 uppercase tracking-wider">Attendance Tip</p>
+          <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed font-medium">
+            Marking attendance here updates your "Bunk Budget" in real-time. 
+            Use 'Cancel' for cancelled classes to exclude them from calculations.
+          </p>
+        </div>
+      )}
 
       {/* Interactive Share Modal */}
       <ShareModal
@@ -110,14 +130,24 @@ const Today: React.FC = () => {
         records={records}
       />
 
-      {modal && (
+      <ArchiveSemesterModal
+        isOpen={showArchiveModal}
+        subjects={subjects}
+        records={records}
+        settings={settings}
+        onArchive={archiveSemester}
+        onClose={() => setShowArchiveModal(false)}
+        onError={(title, message) => setInfoModal({ isOpen: true, title, message, type: 'error' })}
+      />
+
+      {infoModal && (
         <AppModal
-          isOpen={modal.isOpen}
-          title={modal.title}
-          message={modal.message}
-          type={modal.type}
+          isOpen={infoModal.isOpen}
+          title={infoModal.title}
+          message={infoModal.message}
+          type={infoModal.type}
           confirmText="OK"
-          onConfirm={() => setModal(null)}
+          onConfirm={() => setInfoModal(null)}
         />
       )}
     </div>

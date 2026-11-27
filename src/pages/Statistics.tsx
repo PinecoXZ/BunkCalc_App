@@ -2,10 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useSubjects } from '../store/useSubjects';
 import { useAttendance } from '../store/useAttendance';
 import { useSettings } from '../store/useSettings';
-import { calculateSubjectStats, parseLocalDate } from '../lib/calculations';
+import { calculateSubjectStats, calculateAttendanceStreak, parseLocalDate } from '../lib/calculations';
 import ShareModal from '../components/ShareModal';
 import EmptyState from '../components/EmptyState';
-import { AppModal } from '../components/AppModal';
 import WeeklyChart from '../components/WeeklyChart';
 import WhatIfSimulator from '../components/WhatIfSimulator';
 import DayOfWeekHeatmap from '../components/DayOfWeekHeatmap';
@@ -18,20 +17,18 @@ interface Props {
 const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
   const { subjects } = useSubjects();
   const { records } = useAttendance();
-  const streak = useAttendance((state) => state.getStreak());
   const { settings } = useSettings();
+  const streak = useMemo(
+    () => calculateAttendanceStreak(records, subjects, settings.holidays),
+    [records, subjects, settings.holidays]
+  );
   const [showShareModal, setShowShareModal] = useState(false);
-  const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type?: 'error' } | null>(null);
 
   // Hardware Back Button listener
   React.useEffect(() => {
-    if (!showShareModal && !modal) return;
+    if (!showShareModal) return;
 
     const unregister = registerBackHandler(() => {
-      if (modal) {
-        setModal(null);
-        return true;
-      }
       if (showShareModal) {
         setShowShareModal(false);
         return true;
@@ -40,7 +37,7 @@ const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
     });
 
     return unregister;
-  }, [showShareModal, modal]);
+  }, [showShareModal]);
 
   const { totalAttended, totalPossible, overallPct, overallPeakPct, totalSafeBunks, subjectStatsMap } = useMemo(() => {
     let tAttended = 0;
@@ -52,7 +49,7 @@ const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
     const subjectStatsMap = new Map<string, ReturnType<typeof calculateSubjectStats>>();
 
     subjects.forEach((s) => {
-      const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays);
+      const stats = calculateSubjectStats(s, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold);
       subjectStatsMap.set(s.id, stats);
       tAttended += stats.attendedCount;
       tPossible += stats.totalClasses;
@@ -72,7 +69,7 @@ const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
       totalSafeBunks,
       subjectStatsMap,
     };
-  }, [subjects, records, settings.semesterEndDate, settings.holidays]);
+  }, [subjects, records, settings.semesterEndDate, settings.holidays, settings.globalThreshold]);
 
   // Show empty state if no records
   const hasAnyData = records.length > 0 || subjects.some(s => (s.attendedSoFar || 0) > 0 || (s.missedSoFar || 0) > 0);
@@ -217,7 +214,8 @@ const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
         <div className="space-y-3">
           {subjects.map((s) => {
             const stats = subjectStatsMap.get(s.id)!;
-            const isSafe = stats.attendancePct >= (s.threshold * 100);
+            const threshold = s.threshold ?? settings.globalThreshold;
+            const isSafe = stats.attendancePct >= (threshold * 100);
             return (
               <div key={s.id} className="neu-card rounded-2xl p-4 flex justify-between items-center">
                 <div>
@@ -244,17 +242,6 @@ const Statistics: React.FC<Props> = ({ onOpenHistory }) => {
         subjects={subjects}
         records={records}
       />
-
-      {modal && (
-        <AppModal
-          isOpen={modal.isOpen}
-          title={modal.title}
-          message={modal.message}
-          type={modal.type}
-          confirmText="OK"
-          onConfirm={() => setModal(null)}
-        />
-      )}
     </div>
   );
 };

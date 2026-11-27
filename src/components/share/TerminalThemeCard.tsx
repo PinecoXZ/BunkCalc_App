@@ -92,6 +92,11 @@ export const TerminalThemeCard: React.FC<ThemeCardProps> = ({
               </div>
             );
           })}
+          {subjectWithStats.length > 6 && (
+            <p style={{ margin: '4px 0 0 0', opacity: 0.75, textAlign: 'center' }}>
+              ... +{subjectWithStats.length - 6} MORE_COURSES
+            </p>
+          )}
         </div>
       </div>
 

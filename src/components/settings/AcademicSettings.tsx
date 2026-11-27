@@ -1,19 +1,27 @@
 import React from 'react';
-import type { AppSettings } from '../../lib/types';
+import type { AppSettings, Subject } from '../../lib/types';
 import HelpTooltip from '../HelpTooltip';
 import SubHeader from './SubHeader';
 
 interface AcademicSettingsProps {
   settings: AppSettings;
+  subjects?: Subject[];
+  onApplyThresholdToAllSubjects?: (threshold: number) => void;
   setSettings: (settings: AppSettings) => void;
   onBack: () => void;
 }
 
 export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
   settings,
+  subjects = [],
+  onApplyThresholdToAllSubjects,
   setSettings,
   onBack,
 }) => {
+  const hasMismatchedSubjects = subjects.some(
+    (s) => Math.round((s.threshold ?? settings.globalThreshold) * 100) !== Math.round(settings.globalThreshold * 100)
+  );
+
   return (
     <div className="animate-in fade-in duration-150 space-y-6">
       <SubHeader
@@ -23,32 +31,44 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
       />
 
       <div className="neu-card rounded-3xl overflow-hidden divide-y divide-slate-200/50 dark:divide-slate-800/60">
-        <div className="p-4.5 flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Attendance Threshold</p>
-              <HelpTooltip
-                title="Attendance Threshold"
-                content="The target percentage required by your college or university (e.g. 75% or 80%). Your bunk budget is calculated based on this."
-              />
+        <div className="p-4.5 space-y-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <label htmlFor="academic-global-threshold" className="font-bold text-sm text-slate-800 dark:text-slate-200">Attendance Threshold</label>
+                <HelpTooltip
+                  title="Attendance Threshold"
+                  content="The target percentage required by your college or university (e.g. 75% or 80%). Your bunk budget is calculated based on this."
+                />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Minimum required percentage</p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Minimum required percentage</p>
+            <select 
+              id="academic-global-threshold"
+              value={Math.round(settings.globalThreshold * 100)}
+              onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
+              className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
+            >
+              {[60, 65, 70, 75, 80, 85, 90].map(val => (
+                <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">{val}%</option>
+              ))}
+            </select>
           </div>
-          <select 
-            value={Math.round(settings.globalThreshold * 100)}
-            onChange={(e) => setSettings({ ...settings, globalThreshold: Number(e.target.value) / 100 })}
-            className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
-          >
-            {[60, 65, 70, 75, 80, 85, 90].map(val => (
-              <option key={val} value={val} className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">{val}%</option>
-            ))}
-          </select>
+          {hasMismatchedSubjects && onApplyThresholdToAllSubjects && (
+            <button
+              type="button"
+              onClick={() => onApplyThresholdToAllSubjects(settings.globalThreshold)}
+              className="w-full neu-btn py-2 px-3 rounded-xl text-[11px] font-bold text-blue-600 dark:text-blue-400"
+            >
+              Apply {Math.round(settings.globalThreshold * 100)}% threshold to all existing subjects
+            </button>
+          )}
         </div>
 
         <div className="p-4.5 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Danger Zone Buffer</p>
+              <label htmlFor="academic-warning-buffer" className="font-bold text-sm text-slate-800 dark:text-slate-200">Danger Zone Buffer</label>
               <HelpTooltip
                 title="Danger Zone Buffer"
                 content="Buffer percentage above your threshold that triggers warning banners before you fall below the required attendance."
@@ -57,6 +77,7 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400">Alert threshold above minimum</p>
           </div>
           <select 
+            id="academic-warning-buffer"
             value={Math.round(settings.warningBuffer * 100)}
             onChange={(e) => setSettings({ ...settings, warningBuffer: Number(e.target.value) / 100 })}
             className="neu-input rounded-xl px-3 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white cursor-pointer"
@@ -71,7 +92,7 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
         <div className="p-4.5 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Honor Target (Optional)</p>
+              <label htmlFor="academic-honor-target" className="font-bold text-sm text-slate-800 dark:text-slate-200">Honor Target (Optional)</label>
               <HelpTooltip
                 title="Honor Target"
                 content="Higher target threshold (e.g. 85% or 90%) for top internal assessment marks or scholarship criteria."
@@ -80,6 +101,7 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400">Internal grading / scholarship goal</p>
           </div>
           <select 
+            id="academic-honor-target"
             value={settings.targetThreshold ? Math.round(settings.targetThreshold * 100) : 0}
             onChange={(e) => {
               const val = Number(e.target.value);
@@ -96,7 +118,7 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
 
         <div className="p-4.5">
           <div className="flex items-center gap-1.5 mb-1">
-            <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Semester End Date</p>
+            <label htmlFor="academic-semester-end" className="font-bold text-sm text-slate-800 dark:text-slate-200">Semester End Date</label>
             <HelpTooltip
               title="Semester End Date"
               content="Defines how many remaining classes exist in the semester pool to compute exact safe bunks."
@@ -104,9 +126,14 @@ export const AcademicSettings: React.FC<AcademicSettingsProps> = ({
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Shared semester timeline for all subjects</p>
           <input 
+            id="academic-semester-end"
             type="date" 
-            value={settings.semesterEndDate.split('T')[0]}
-            onChange={(e) => e.target.value && setSettings({ ...settings, semesterEndDate: e.target.value })}
+            value={(settings.semesterEndDate || '').split('T')[0]}
+            onChange={(e) => {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) {
+                setSettings({ ...settings, semesterEndDate: e.target.value });
+              }
+            }}
             className="w-full neu-input rounded-xl p-3 text-sm font-bold outline-none text-slate-900 dark:text-white"
           />
         </div>

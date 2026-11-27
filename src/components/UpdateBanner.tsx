@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUpdateStore } from '../store/useUpdateStore';
+import { isSafeHttpsUrl, useUpdateStore } from '../store/useUpdateStore';
 
 export const UpdateBanner: React.FC = () => {
   const { isUpdateAvailable, latestVersion, apkUrl, changelog, dismissUpdate } = useUpdateStore();
@@ -7,12 +7,12 @@ export const UpdateBanner: React.FC = () => {
   if (!isUpdateAvailable) return null;
 
   const handleDownload = async () => {
-    if (!apkUrl) return;
+    if (!apkUrl || !isSafeHttpsUrl(apkUrl)) return;
     try {
       const { Browser } = await import('@capacitor/browser');
       await Browser.open({ url: apkUrl });
     } catch {
-      window.open(apkUrl, '_blank');
+      window.open(apkUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
